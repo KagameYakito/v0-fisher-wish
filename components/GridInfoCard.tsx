@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle, X } from 'lucide-react';
 import { GridData, UserTier } from '@/lib/mock-data';
 import { TierLockOverlay } from './TierLockOverlay';
+import { SpeciesIcon } from './SpeciesIcon';
 
 interface GridInfoCardProps {
   grid: GridData;
@@ -33,9 +34,9 @@ export function GridInfoCard({
   };
 
   const getProbabilityIcon = (probability: number) => {
-    if (probability < 40) return '🔴';
-    if (probability < 70) return '🟡';
-    return '🟢';
+    if (probability < 40) return <span className="text-red-400">●</span>;
+    if (probability < 70) return <span className="text-amber-400">●</span>;
+    return <span className="text-emerald-400">●</span>;
   };
 
   return (
@@ -65,28 +66,31 @@ export function GridInfoCard({
             {/* Header */}
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-3xl mb-2">{grid.icon}</div>
+                <div className="mb-3 text-cyan-400">
+                  <SpeciesIcon icon={grid.icon} size={32} />
+                </div>
                 <h2 className="text-2xl font-bold text-slate-100">
                   {grid.species}
                 </h2>
                 <p className="text-sm text-slate-400 mt-1">
-                  Lat: {grid.lat}, Lon: {grid.lon}
+                  Lat: {grid.lat.toFixed(2)}, Lon: {grid.lon.toFixed(2)}
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="text-slate-400 hover:text-slate-200 transition"
+                className="text-slate-400 hover:text-slate-200 transition p-1"
+                aria-label="Close"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Protection status */}
             {grid.status === 'protected' && (
               <div className="flex items-center gap-3 p-3 bg-red-500/15 border border-red-500/30 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
                 <div className="text-sm text-red-200">
-                  <span className="font-semibold">🔴 SPAWNING PROTECTED</span> – Catch & Release Only
+                  <span className="font-semibold">SPAWNING PROTECTED</span> – Catch & Release Only
                 </div>
               </div>
             )}
@@ -96,7 +100,7 @@ export function GridInfoCard({
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-slate-300">Probability</span>
                 <div
-                  className={`px-3 py-1 rounded-full text-sm font-bold border ${getProbabilityColor(
+                  className={`px-3 py-1 rounded-full text-sm font-bold border flex items-center gap-2 ${getProbabilityColor(
                     grid.probability
                   )}`}
                 >

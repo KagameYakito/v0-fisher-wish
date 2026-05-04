@@ -3,7 +3,7 @@ export interface GridData {
   lat: number;
   lon: number;
   species: string;
-  icon: string;
+  icon: 'fish' | 'shrimp' | 'waves';
   probability: number;
   trend: number;
   reason: string;
@@ -20,7 +20,7 @@ export const MOCK_GRIDS: GridData[] = [
     lat: -6.12,
     lon: 106.45,
     species: 'Tongkol',
-    icon: '🐟',
+    icon: 'fish',
     probability: 84,
     trend: 12,
     reason: 'Light rain + falling pressure',
@@ -35,7 +35,7 @@ export const MOCK_GRIDS: GridData[] = [
     lat: -6.13,
     lon: 106.46,
     species: 'Kakap Merah',
-    icon: '🐠',
+    icon: 'fish',
     probability: 38,
     trend: -5,
     reason: 'High wind + SST outside optimal range',
@@ -50,7 +50,7 @@ export const MOCK_GRIDS: GridData[] = [
     lat: -6.11,
     lon: 106.44,
     species: 'Lobster',
-    icon: '🦀',
+    icon: 'shrimp',
     probability: 65,
     trend: 8,
     reason: 'Incoming tide + clear visibility',
@@ -65,7 +65,7 @@ export const MOCK_GRIDS: GridData[] = [
     lat: -6.14,
     lon: 106.44,
     species: 'Tuna',
-    icon: '🐟',
+    icon: 'fish',
     probability: 72,
     trend: 6,
     reason: 'Optimal temp + good visibility',
@@ -80,7 +80,7 @@ export const MOCK_GRIDS: GridData[] = [
     lat: -6.10,
     lon: 106.46,
     species: 'Crab',
-    icon: '🦀',
+    icon: 'shrimp',
     probability: 45,
     trend: -2,
     reason: 'Moderate current + clear water',
@@ -95,7 +95,7 @@ export const MOCK_GRIDS: GridData[] = [
     lat: -6.15,
     lon: 106.45,
     species: 'Grouper',
-    icon: '🐠',
+    icon: 'fish',
     probability: 92,
     trend: 18,
     reason: 'Perfect conditions + rising tide',
@@ -110,7 +110,7 @@ export const MOCK_GRIDS: GridData[] = [
     lat: -6.11,
     lon: 106.47,
     species: 'Squid',
-    icon: '🦑',
+    icon: 'waves',
     probability: 58,
     trend: 3,
     reason: 'Mild current + low light hours',
@@ -125,7 +125,7 @@ export const MOCK_GRIDS: GridData[] = [
     lat: -6.13,
     lon: 106.43,
     species: 'Snapper',
-    icon: '🐠',
+    icon: 'fish',
     probability: 34,
     trend: -8,
     reason: 'High turbidity + adverse pressure',
@@ -140,7 +140,7 @@ export const MOCK_GRIDS: GridData[] = [
     lat: -6.12,
     lon: 106.47,
     species: 'Mackerel',
-    icon: '🐟',
+    icon: 'fish',
     probability: 76,
     trend: 14,
     reason: 'Strong current + clear conditions',
@@ -153,10 +153,10 @@ export const MOCK_GRIDS: GridData[] = [
 ];
 
 export const SPECIES_CATEGORIES = [
-  { name: 'All', icon: '🐟', filter: 'all' },
-  { name: 'Pelagic', icon: '🐠', filter: 'pelagic' },
-  { name: 'Crustacean', icon: '🦀', filter: 'crustacean' },
-  { name: 'Cephalopod', icon: '🦑', filter: 'cephalopod' },
+  { name: 'All', icon: 'fish', filter: 'all' },
+  { name: 'Pelagic', icon: 'fish', filter: 'pelagic' },
+  { name: 'Crustacean', icon: 'shrimp', filter: 'crustacean' },
+  { name: 'Cephalopod', icon: 'waves', filter: 'cephalopod' },
 ];
 
 export type UserTier = 'free' | 'premium' | 'ultra';

@@ -48,41 +48,44 @@ export function HeaderBar({
 
   return (
     <div className="w-full bg-gradient-to-b from-slate-950 via-slate-900 to-transparent border-b border-white/10 px-4 py-4">
-      <div className="max-w-2xl mx-auto space-y-4">
-        {/* Top row: Title and tier */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-100">Fishwise</h1>
-            <p className="text-xs text-slate-400">Predictive Fishing Guide</p>
+      <div className="max-w-full mx-auto">
+        {/* Single row: Logo (left), Timer (center), Tier + Settings (right) */}
+        <div className="flex items-center justify-between gap-4">
+          {/* Left: Logo */}
+          <div className="flex-shrink-0 min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-slate-100 whitespace-nowrap">
+              Fishwise
+            </h1>
+            <p className="text-xs text-slate-400 whitespace-nowrap">Fishing Guide</p>
           </div>
-          <button
-            onClick={onSettingsClick}
-            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-          >
-            <Settings className="w-5 h-5 text-slate-400 hover:text-slate-200" />
-          </button>
-        </div>
 
-        {/* Status badges row */}
-        <div className="flex items-center justify-between gap-3">
-          {/* Sync countdown */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/40 border border-white/5 rounded-lg flex-1 hover:bg-slate-800/60 transition-colors">
-            <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin" />
-            <div className="text-sm">
-              <div className="font-semibold text-slate-100">
-                Next update in {countdown}
+          {/* Center: Sync countdown */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/40 border border-white/5 rounded-lg hover:bg-slate-800/60 transition-colors flex-1 min-w-0">
+            <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin flex-shrink-0" />
+            <div className="text-sm min-w-0">
+              <div className="font-semibold text-slate-100 text-xs md:text-sm">
+                Next: {countdown}
               </div>
-              <div className="text-xs text-slate-400">
-                Last synced: {lastSync}
+              <div className="text-xs text-slate-400 hidden md:block">
+                Last: {lastSync}
               </div>
             </div>
           </div>
 
-          {/* Tier badge */}
-          <div
-            className={`px-3 py-2 rounded-lg text-xs font-semibold border border-white/10 ${tier.color}`}
-          >
-            {tier.label}
+          {/* Right: Tier badge + Settings */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div
+              className={`px-2 md:px-3 py-1 md:py-2 rounded-lg text-xs font-semibold border border-white/10 whitespace-nowrap ${tier.color}`}
+            >
+              {tier.label}
+            </div>
+            <button
+              onClick={onSettingsClick}
+              className="p-2 hover:bg-slate-800 rounded-lg transition-colors flex-shrink-0"
+              aria-label="Settings"
+            >
+              <Settings className="w-5 h-5 text-slate-400 hover:text-slate-200" />
+            </button>
           </div>
         </div>
       </div>
