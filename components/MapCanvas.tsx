@@ -143,11 +143,12 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
 
       <MapContainer
         ref={mapRef}
-        center={[0, 110]}
+        center={[0, 0]}
         zoom={2.5}
         minZoom={2.5}
         maxZoom={19}
-        // ✅ TIDAK ADA maxBounds - USER BEBAS GESER KE MANA SAJA (AMERIKA, EROPA, AFRIKA, DLL)
+        maxBounds={[[-90, -180], [90, 180]]}  // 🔒 BATAS DUNIA YANG BENAR
+        maxBoundsViscosity={1.0}              // 🔒 HARD LOCK - TIDAK BISA KE VOID
         zoomSnap={0.1}
         zoomDelta={0.5}
         className="w-full h-full"
