@@ -43,13 +43,12 @@ const getH3Resolution = (zoom: number): number => {
 };
 
 export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' }: MapCanvasProps) {
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(2.5);
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
-  // ✅ FIXED: Tambahkan "data:" sebelum GridData
   const [hexagons, setHexagons] = useState<Array<{ 
     id: string; 
     coords: [number, number][]; 
-    data: GridData  // ← INI YANG BENAR (ada "data:")
+    data: GridData  
   }>>([]);
   const [isMapReady, setIsMapReady] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
@@ -98,25 +97,14 @@ export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' 
             if (!iconMap[filterSpecies]?.includes(gridData.icon)) continue;
           }
 
-          newHexagons.push({ id: h3Index, coords, data: gridData });
+          newHexagons.push({ id: h3Index, coords,  data: gridData });
         } catch (e) { /* skip */ }
       }
     }
     setHexagons(newHexagons);
   }, [filterSpecies]);
 
-  // Auto-fit world bounds saat map ready
-  useEffect(() => {
-    if (mapRef.current && !isMapReady) {
-      const worldBounds = L.latLngBounds([[-90, -180], [90, 180]]);
-      mapRef.current.fitBounds(worldBounds, { 
-        padding: [0, 0],
-        maxZoom: 1,
-        animate: false 
-      });
-      setIsMapReady(true);
-    }
-  }, [isMapReady]);
+  // HAPUS useEffect fitBounds yang lama!
 
   useEffect(() => {
     if (bounds) generateHexagons(bounds, getH3Resolution(zoomLevel));
@@ -140,13 +128,13 @@ export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' 
 
       <MapContainer
         ref={mapRef}
-        center={[0, 0]}
-        zoom={1}
-        minZoom={1}
+        center={[0, 110]}  // Fokus Indonesia
+        zoom={2.5}
+        minZoom={1.5}
         maxZoom={19}
-        maxBounds={[[-90, -180], [90, 180]]}
-        maxBoundsViscosity={1.0}
-        zoomSnap={0.5}
+        maxBounds={[[-85, -200], [85, 200]]}
+        maxBoundsViscosity={0.8}
+        zoomSnap={0.1}
         zoomDelta={0.5}
         className="w-full h-full"
         style={{ width: '100%', height: '100%' }}
@@ -155,7 +143,7 @@ export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' 
         doubleClickZoom={true}
         touchZoom={true}
         dragging={true}
-        worldCopyJump={true}
+        worldCopyJump={false}  // 🔑 MATIKAN DUPLIKASI
         preferCanvas={true}
       >
         <MapZoomHandler onZoomChange={setZoomLevel} onMapReady={() => setIsMapReady(true)} />
@@ -165,7 +153,7 @@ export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' 
           attribution='&copy; CARTO'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           maxZoom={19}
-          noWrap={false}
+          noWrap={true}  // 🔑 JANGAN WRAP TILE
         />
 
         {hexagons.map((hex) => {
