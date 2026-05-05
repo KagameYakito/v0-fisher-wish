@@ -147,8 +147,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         zoom={2.5}
         minZoom={2.5}
         maxZoom={19}
-        maxBounds={[[-70, 60], [70, 170]]}
-        maxBoundsViscosity={1.0}
+        // ✅ TIDAK ADA maxBounds - USER BEBAS GESER KE MANA SAJA (AMERIKA, EROPA, AFRIKA, DLL)
         zoomSnap={0.1}
         zoomDelta={0.5}
         className="w-full h-full"
