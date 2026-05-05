@@ -163,10 +163,13 @@ export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' 
         ref={mapRef}
         center={[-6.0, 110.0]}
         zoom={6}
+        minZoom={2}  // 🔒 Batasi zoom out maksimal level 2
         className="w-full h-full"
         zoomControl={false}
         scrollWheelZoom={true}
         doubleClickZoom={true}
+        maxBounds={[[-90, -180], [90, 180]]} // 🔒 Kunci area valid dunia
+        maxBoundsViscosity={1.0} // 🔒 Buat batas "keras" (tidak bisa geser lebih)
       >
         <MapZoomHandler onZoomChange={setZoomLevel} />
         <ZoomControl position="bottomright" />
@@ -175,6 +178,7 @@ export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' 
           attribution='&copy; <a href="https://carto.com">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           maxZoom={19}
+          noWrap={true} // 🔑 KUNCI UTAMA: Matikan pengulangan tile horizontal
         />
 
         {hexagons.map((hex) => {
