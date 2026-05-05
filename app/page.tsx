@@ -1,14 +1,27 @@
 'use client';
 
 import { useState } from 'react';
+// Import komponen lain seperti biasa
 import { GridData, UserTier } from '@/lib/mock-data';
 import { HeaderBar } from '@/components/HeaderBar';
-import { MapCanvas } from '@/components/MapCanvas';
 import { GridInfoCard } from '@/components/GridInfoCard';
 import { SpeciesFilterBar } from '@/components/SpeciesFilterBar';
 import { UpgradeModal } from '@/components/UpgradeModal';
 
+// ⚠️ GANTI IMPORT INI - Dynamic Import dengan ssr: false
+import dynamic from 'next/dynamic';
+
+const MapCanvas = dynamic(() => import('@/components/MapCanvas').then(mod => ({ default: mod.MapCanvas })), {
+  ssr: false,  // ← INI KUNCINYA! Disable server-side rendering
+  loading: () => (
+    <div className="w-full h-full bg-slate-950 flex items-center justify-center">
+      <div className="text-cyan-400 animate-pulse">Loading map...</div>
+    </div>
+  )
+});
+
 export default function Home() {
+  // ... rest of your code tetap sama
   const [userTier, setUserTier] = useState<UserTier>('free');
   const [selectedGrid, setSelectedGrid] = useState<GridData | null>(null);
   const [speciesFilter, setSpeciesFilter] = useState('all');
@@ -35,15 +48,9 @@ export default function Home() {
 
   return (
     <div className="w-screen h-screen bg-slate-950 flex flex-col overflow-hidden">
-      {/* Header */}
-      <HeaderBar
-        userTier={userTier}
-        onSettingsClick={handleUpgradeModal}
-      />
-
-      {/* Main content area */}
+      <HeaderBar userTier={userTier} onSettingsClick={handleUpgradeModal} />
+      
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Map canvas - takes up remaining space minus filter bar */}
         <div className="flex-1 overflow-hidden">
           <MapCanvas
             onGridSelect={handleGridSelect}
@@ -51,15 +58,10 @@ export default function Home() {
             filterSpecies={speciesFilter}
           />
         </div>
-
-        {/* Filter bar */}
-        <SpeciesFilterBar
-          onFilterChange={setSpeciesFilter}
-          activeFilter={speciesFilter}
-        />
+        
+        <SpeciesFilterBar onFilterChange={setSpeciesFilter} activeFilter={speciesFilter} />
       </div>
 
-      {/* Grid info card (bottom sheet) */}
       {selectedGrid && (
         <GridInfoCard
           grid={selectedGrid}
@@ -70,7 +72,6 @@ export default function Home() {
         />
       )}
 
-      {/* Upgrade modal */}
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
