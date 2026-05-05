@@ -40,9 +40,14 @@ const getH3Resolution = (zoom: number): number => {
 };
 
 export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' }: MapCanvasProps) {
-  const [zoomLevel, setZoomLevel] = useState(2); // Default zoom 2 (full world)
+  const [zoomLevel, setZoomLevel] = useState(1.5);
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
-  const [hexagons, setHexagons] = useState<Array<{ id: string; coords: [number, number][]; data: GridData }>>([]);
+  // ✅ FIXED: Tambahkan "data:" sebelum GridData
+  const [hexagons, setHexagons] = useState<Array<{ 
+    id: string; 
+    coords: [number, number][]; 
+    data: GridData  // ← INI YANG BENAR
+  }>>([]);
   const mapRef = useRef<L.Map | null>(null);
 
   const getHexColor = (prob: number) => {
@@ -52,7 +57,7 @@ export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' 
   };
 
   const generateHexagons = useCallback((mapBounds: L.LatLngBounds, resolution: number) => {
-    const newHexagons: typeof hexagons = [];
+    const newHexagons: Array<{ id: string; coords: [number, number][]; data: GridData }> = [];
     const step = resolution >= 8 ? 0.2 : resolution >= 6 ? 0.5 : 1.0;
     const sw = mapBounds.getSouthWest();
     const ne = mapBounds.getNorthEast();
@@ -109,8 +114,7 @@ export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' 
 
   return (
     <div className="relative w-full h-[100dvh] bg-slate-950 overflow-hidden">
-      {/* Density Indicator - Mobile Optimized */}
-      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-[1000] bg-slate-900/90 backdrop-blur px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg border border-white/10 text-xs sm:text-sm pointer-events-none">
+      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-[1000] bg-slate-900/90 backdrop-blur px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg border border-white/10 text-xs sm:text-sm pointer-events-none select-none">
         <div className="text-gray-400">Grid Density</div>
         <div className="font-bold text-cyan-400">
           {zoomLevel <= 3 ? '1x (World)' : zoomLevel <= 7 ? '10x (Region)' : '100x+ (Local)'}
@@ -119,18 +123,21 @@ export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' 
 
       <MapContainer
         ref={mapRef}
-        center={[0, 0]}       // Pusat Equator agar 1:1 world view
-        zoom={2}              // Default: 1 layar penuh dunia
-        minZoom={2}           // 🔒 Stop zoom out di sini (hilangkan void)
+        center={[0, 0]}
+        zoom={1.5}
+        minZoom={1.5}
         maxZoom={19}
-        zoomSnap={1}          // Snap ke angka bulat (cegah tile gap)
-        zoomDelta={1}
+        maxBounds={[[-85, -180], [85, 180]]}
+        maxBoundsViscosity={1.0}
+        zoomSnap={0.5}
+        zoomDelta={0.5}
         className="w-full h-full"
         zoomControl={false}
         scrollWheelZoom={true}
         doubleClickZoom={true}
         touchZoom={true}
         dragging={true}
+        worldCopyJump={false}
       >
         <MapZoomHandler onZoomChange={setZoomLevel} />
         <ZoomControl position="bottomright" />
@@ -139,7 +146,7 @@ export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' 
           attribution='&copy; CARTO'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           maxZoom={19}
-          noWrap={true} // 🔑 Matikan duplikasi horizontal
+          noWrap={true}
         />
 
         {hexagons.map((hex) => {
