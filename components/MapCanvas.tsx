@@ -21,33 +21,37 @@ interface MapCanvasProps {
   filterSpecies?: string;
 }
 
-function MapZoomHandler({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
+function MapZoomHandler({ onZoomChange, onMapReady }: { onZoomChange: (zoom: number) => void; onMapReady: () => void }) {
   const map = useMap();
+  
   useEffect(() => {
     const handleZoom = () => onZoomChange(map.getZoom());
     map.on('zoomend', handleZoom);
+    onMapReady();
     return () => { map.off('zoomend', handleZoom); };
-  }, [map, onZoomChange]);
+  }, [map, onZoomChange, onMapReady]);
+  
   return null;
 }
 
 const getH3Resolution = (zoom: number): number => {
-  if (zoom <= 3) return 3;
-  if (zoom <= 5) return 4;
-  if (zoom <= 7) return 6;
-  if (zoom <= 9) return 8;
+  if (zoom <= 2) return 2;
+  if (zoom <= 4) return 3;
+  if (zoom <= 6) return 5;
+  if (zoom <= 8) return 7;
   return 9;
 };
 
 export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' }: MapCanvasProps) {
-  const [zoomLevel, setZoomLevel] = useState(1.5);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
   // ✅ FIXED: Tambahkan "data:" sebelum GridData
   const [hexagons, setHexagons] = useState<Array<{ 
     id: string; 
     coords: [number, number][]; 
-    data: GridData  // ← INI YANG BENAR
+    data: GridData  // ← INI YANG BENAR (ada "data:")
   }>>([]);
+  const [isMapReady, setIsMapReady] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
 
   const getHexColor = (prob: number) => {
@@ -101,6 +105,19 @@ export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' 
     setHexagons(newHexagons);
   }, [filterSpecies]);
 
+  // Auto-fit world bounds saat map ready
+  useEffect(() => {
+    if (mapRef.current && !isMapReady) {
+      const worldBounds = L.latLngBounds([[-90, -180], [90, 180]]);
+      mapRef.current.fitBounds(worldBounds, { 
+        padding: [0, 0],
+        maxZoom: 1,
+        animate: false 
+      });
+      setIsMapReady(true);
+    }
+  }, [isMapReady]);
+
   useEffect(() => {
     if (bounds) generateHexagons(bounds, getH3Resolution(zoomLevel));
   }, [zoomLevel, bounds, generateHexagons]);
@@ -117,36 +134,38 @@ export function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' 
       <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-[1000] bg-slate-900/90 backdrop-blur px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg border border-white/10 text-xs sm:text-sm pointer-events-none select-none">
         <div className="text-gray-400">Grid Density</div>
         <div className="font-bold text-cyan-400">
-          {zoomLevel <= 3 ? '1x (World)' : zoomLevel <= 7 ? '10x (Region)' : '100x+ (Local)'}
+          {zoomLevel <= 2 ? '1x (World)' : zoomLevel <= 6 ? '10x (Region)' : '100x+ (Local)'}
         </div>
       </div>
 
       <MapContainer
         ref={mapRef}
         center={[0, 0]}
-        zoom={1.5}
-        minZoom={1.5}
+        zoom={1}
+        minZoom={1}
         maxZoom={19}
-        maxBounds={[[-85, -180], [85, 180]]}
+        maxBounds={[[-90, -180], [90, 180]]}
         maxBoundsViscosity={1.0}
         zoomSnap={0.5}
         zoomDelta={0.5}
         className="w-full h-full"
+        style={{ width: '100%', height: '100%' }}
         zoomControl={false}
         scrollWheelZoom={true}
         doubleClickZoom={true}
         touchZoom={true}
         dragging={true}
-        worldCopyJump={false}
+        worldCopyJump={true}
+        preferCanvas={true}
       >
-        <MapZoomHandler onZoomChange={setZoomLevel} />
+        <MapZoomHandler onZoomChange={setZoomLevel} onMapReady={() => setIsMapReady(true)} />
         <ZoomControl position="bottomright" />
         
         <TileLayer
           attribution='&copy; CARTO'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           maxZoom={19}
-          noWrap={true}
+          noWrap={false}
         />
 
         {hexagons.map((hex) => {
