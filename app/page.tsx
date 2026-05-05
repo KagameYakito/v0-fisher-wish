@@ -1,18 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-// Import komponen lain seperti biasa
 import { GridData, UserTier } from '@/lib/mock-data';
 import { HeaderBar } from '@/components/HeaderBar';
 import { GridInfoCard } from '@/components/GridInfoCard';
 import { SpeciesFilterBar } from '@/components/SpeciesFilterBar';
 import { UpgradeModal } from '@/components/UpgradeModal';
-
-// ⚠️ GANTI IMPORT INI - Dynamic Import dengan ssr: false
 import dynamic from 'next/dynamic';
 
-const MapCanvas = dynamic(() => import('@/components/MapCanvas').then(mod => ({ default: mod.MapCanvas })), {
-  ssr: false,  // ← INI KUNCINYA! Disable server-side rendering
+// ✅ CORRECT: Karena MapCanvas pakai export default
+const MapCanvas = dynamic(() => import('@/components/MapCanvas'), {
+  ssr: false,
   loading: () => (
     <div className="w-full h-full bg-slate-950 flex items-center justify-center">
       <div className="text-cyan-400 animate-pulse">Loading map...</div>
@@ -21,7 +19,6 @@ const MapCanvas = dynamic(() => import('@/components/MapCanvas').then(mod => ({ 
 });
 
 export default function Home() {
-  // ... rest of your code tetap sama
   const [userTier, setUserTier] = useState<UserTier>('free');
   const [selectedGrid, setSelectedGrid] = useState<GridData | null>(null);
   const [speciesFilter, setSpeciesFilter] = useState('all');
