@@ -144,8 +144,8 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       <MapContainer
         ref={mapRef}
         center={[0, 0]}
-        zoom={2.5}
-        minZoom={2.5}
+        zoom={5}           // 🔑 DEFAULT: Regional view (masuk akal untuk nelayan)
+        minZoom={5}  
         maxZoom={19}
         maxBounds={[[-90, -180], [90, 180]]}  // 🔒 BATAS DUNIA YANG BENAR
         maxBoundsViscosity={1.0}              // 🔒 HARD LOCK - TIDAK BISA KE VOID
