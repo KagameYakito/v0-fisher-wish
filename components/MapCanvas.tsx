@@ -26,15 +26,22 @@ function MapZoomHandler({ onZoomChange, onMapReady }: { onZoomChange: (zoom: num
   
   useEffect(() => {
     const handleZoom = () => onZoomChange(map.getZoom());
-    map.on('zoomend', handleZoom);
+    
+    // ✅ Update REAL-TIME selama animasi zoom (bukan hanya zoomend)
+    map.on('zoom', handleZoom);  // Fires continuously during zoom animation
+    map.on('zoomend', handleZoom); // Fires when zoom completes
+    
     onMapReady();
-    return () => { map.off('zoomend', handleZoom); };
+    return () => { 
+      map.off('zoom', handleZoom);
+      map.off('zoomend', handleZoom);
+    };
   }, [map, onZoomChange, onMapReady]);
   
   return null;
 }
 
-// 📍 KOMPONEN TITIK GPS DENGAN UKURAN DINAMIS
+// 📍 KOMPONEN TITIK GPS DENGAN TRANSISI SMOOTH
 function GPSMarker({ 
   position, 
   onClick, 
@@ -46,20 +53,16 @@ function GPSMarker({
 }) {
   if (!position) return null;
 
-  // ✅ Formula dinamis yang lebih smooth
-  // Zoom 5: 15px (besar, mudah diklik)
-  // Zoom 7: 10px (sedang)
-  // Zoom 9: 7px (kecil tapi terlihat)
-  // Zoom 15: 4px (minimal)
-  const baseRadius = 15;
+  // ✅ Formula yang lebih smooth untuk transisi
+  const baseRadius = 12;
   const minRadius = 4;
   const dynamicRadius = Math.max(
     minRadius, 
-    baseRadius / Math.pow(1.25, currentZoom - 5)
+    baseRadius / Math.pow(1.3, currentZoom - 5)
   );
   
   const innerRadius = dynamicRadius * 0.5;
-  const centerRadius = dynamicRadius * 0.25;
+  const centerRadius = Math.max(2, dynamicRadius * 0.25);
 
   return (
     <>
