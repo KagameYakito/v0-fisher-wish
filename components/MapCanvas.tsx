@@ -156,13 +156,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       setUserLocation(newLocation);
       setLocationError(null);
 
-      // ✅ Auto-center HANYA saat pertama kali load
-      if (!hasLoadedInitialLocation && mapRef.current) {
-        mapRef.current.flyTo(newLocation, 3, {
-          duration: 1.5,
-        });
-        setHasLoadedInitialLocation(true);
-      }
+      // ✅ TIDAK auto-center sama sekali - biarkan user kontrol
     };
 
     // Error saat mendapat lokasi
