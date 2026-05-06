@@ -387,7 +387,8 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         {/* 📍 TITIK GPS USER (bisa diklik untuk zoom detail) */}
         <GPSMarker 
           position={userLocation} 
-          onClick={handleGPSMarkerClick}  // ✅ Tambah onClick
+          onClick={handleGPSMarkerClick}
+          currentZoom={zoomLevel}   // ✅ Tambah onClick
         />
 
         {hexagons.map((hex: any) => {
