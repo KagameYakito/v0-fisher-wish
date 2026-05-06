@@ -21,39 +21,23 @@ interface MapCanvasProps {
   filterSpecies?: string;
 }
 
-function MapZoomHandler({ onZoomChange, onMapReady }: { onZoomChange: (zoom: number) => void; onMapReady: () => void }) {
-  const map = useMap();
-  
-  useEffect(() => {
-    const handleZoom = () => onZoomChange(map.getZoom());
-    
-    // ✅ Hanya update saat zoom selesai (bukan real-time)
-    map.on('zoomend', handleZoom);
-    
-    onMapReady();
-    return () => { 
-      map.off('zoomend', handleZoom);
-    };
-  }, [map, onZoomChange, onMapReady]);
-  
-  return null;
-}
-
-// 📍 KOMPONEN TITIK GPS DENGAN UKURAN FIXED (seperti Google Maps)
+// 📍 KOMPONEN TITIK GPS - UKURAN SELALU SINKRON DENGAN MAP
 function GPSMarker({ 
   position, 
-  onClick 
+  onClick,
+  mapRef
 }: { 
   position: [number, number] | null; 
   onClick?: () => void;
+  mapRef: React.MutableRefObject<L.Map | null>;
 }) {
   if (!position) return null;
 
-  // ✅ UKURAN FIXED - Tidak berubah saat zoom
-  // Ini membuat marker selalu konsisten dan mudah diklik
-  const outerRadius = 12;   // Lingkaran luar (pulse)
-  const innerRadius = 6;    // Lingkaran dalam (solid)
-  const centerRadius = 3;   // Titik tengah (putih)
+  // ✅ Ukuran FIXED - Tidak terpengaruh zoom
+  // CircleMarker dengan radius pixel TIDAK akan berubah saat zoom
+  const outerRadius = 10;
+  const innerRadius = 5;
+  const centerRadius = 2.5;
 
   return (
     <>
@@ -249,6 +233,19 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
     }
   }, []);
 
+  useEffect(() => {
+    if (mapRef.current) {
+      const handleZoomEnd = () => {
+        setZoomLevel(mapRef.current!.getZoom());
+      };
+      
+      mapRef.current.on('zoomend', handleZoomEnd);
+      return () => {
+        mapRef.current!.off('zoomend', handleZoomEnd);
+      };
+    }
+  }, []);
+
   // Start GPS tracking saat component mount
   useEffect(() => {
     getUserLocation();
@@ -379,7 +376,6 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         worldCopyJump={false}
         preferCanvas={true}
       >
-        <MapZoomHandler onZoomChange={setZoomLevel} onMapReady={() => setIsMapReady(true)} />
         <ZoomControl position="bottomright" />
         
         <TileLayer
@@ -393,6 +389,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         <GPSMarker 
           position={userLocation} 
           onClick={handleGPSMarkerClick}
+          mapRef={mapRef}  // ✅ Pass map ref
         />
 
         {hexagons.map((hex: any) => {
