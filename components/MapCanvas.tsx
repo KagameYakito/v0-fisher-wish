@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MapContainer, TileLayer, Polygon, useMap, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, useMap, ZoomControl, CircleMarker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import * as h3 from 'h3-js';
@@ -34,6 +34,85 @@ function MapZoomHandler({ onZoomChange, onMapReady }: { onZoomChange: (zoom: num
   return null;
 }
 
+// 📍 KOMPONEN TITIK GPS DENGAN ANIMASI PULSE
+function GPSMarker({ position }: { position: [number, number] | null }) {
+  if (!position) return null;
+
+  return (
+    <>
+      {/* Lingkaran luar (pulse animation) */}
+      <CircleMarker
+        center={position}
+        radius={20}
+        pathOptions={{
+          color: '#3b82f6',
+          fillColor: '#3b82f6',
+          fillOpacity: 0.2,
+          weight: 1,
+        }}
+        className="animate-ping"
+      />
+      {/* Lingkaran dalam (solid) */}
+      <CircleMarker
+        center={position}
+        radius={8}
+        pathOptions={{
+          color: '#3b82f6',
+          fillColor: '#3b82f6',
+          fillOpacity: 0.8,
+          weight: 2,
+        }}
+      />
+      {/* Titik tengah (putih) */}
+      <CircleMarker
+        center={position}
+        radius={4}
+        pathOptions={{
+          color: '#ffffff',
+          fillColor: '#ffffff',
+          fillOpacity: 1,
+          weight: 1,
+        }}
+      />
+    </>
+  );
+}
+
+// 🎯 TOMBOL LOKASI FLOATING
+function LocationButton({ onClick, hasLocation }: { onClick: () => void; hasLocation: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`absolute bottom-20 right-4 z-[1000] p-3 rounded-full shadow-lg border-2 transition-all ${
+        hasLocation 
+          ? 'bg-blue-600 border-blue-400 hover:bg-blue-700' 
+          : 'bg-slate-700 border-slate-500 hover:bg-slate-600'
+      }`}
+      title="Lokasi Saya"
+    >
+      <svg 
+        className="w-6 h-6 text-white" 
+        fill="none" 
+        stroke="currentColor" 
+        viewBox="0 0 24 24"
+      >
+        <path 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          strokeWidth={2} 
+          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" 
+        />
+        <path 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          strokeWidth={2} 
+          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" 
+        />
+      </svg>
+    </button>
+  );
+}
+
 const getH3Resolution = (zoom: number): number => {
   if (zoom <= 2) return 2;
   if (zoom <= 4) return 3;
@@ -48,12 +127,78 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
   const [hexagons, setHexagons] = useState<any[]>([]);
   const [isMapReady, setIsMapReady] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
+  
+  // 📍 STATE UNTUK GPS LOCATION
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [watchId, setWatchId] = useState<number | null>(null);
 
   const getHexColor = (prob: number) => {
     if (prob < 40) return '#ef4444';
     if (prob < 70) return '#f59e0b';
     return '#10b981';
   };
+
+  // 📍 FUNGSI MENDAPATKAN LOKASI GPS
+  const getUserLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationError('Browser tidak mendukung GPS');
+      return;
+    }
+
+    // Sukses mendapat lokasi
+    const success = (position: GeolocationPosition) => {
+      const { latitude, longitude } = position.coords;
+      const newLocation: [number, number] = [latitude, longitude];
+      
+      setUserLocation(newLocation);
+      setLocationError(null);
+
+      // Auto-center map ke lokasi user
+      if (mapRef.current) {
+        mapRef.current.flyTo(newLocation, 13, {
+          duration: 1.5,
+        });
+      }
+    };
+
+    // Error saat mendapat lokasi
+    const error = (err: GeolocationPositionError) => {
+      let message = 'Gagal mendapat lokasi';
+      if (err.code === 1) message = 'Izin lokasi ditolak';
+      if (err.code === 2) message = 'Lokasi tidak tersedia';
+      if (err.code === 3) message = 'Timeout meminta lokasi';
+      
+      setLocationError(message);
+      console.warn('GPS Error:', err);
+    };
+
+    // Opsi GPS
+    const options = {
+      enableHighAccuracy: true,  // Akurasi tinggi
+      timeout: 10000,            // Timeout 10 detik
+      maximumAge: 0,             // Jangan cache
+    };
+
+    // Dapatkan lokasi pertama kali
+    navigator.geolocation.getCurrentPosition(success, error, options);
+
+    // Tracking posisi real-time (update setiap 5 detik)
+    const id = navigator.geolocation.watchPosition(success, error, options);
+    setWatchId(id);
+  }, []);
+
+  // Start GPS tracking saat component mount
+  useEffect(() => {
+    getUserLocation();
+
+    // Cleanup: stop tracking saat component unmount
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [getUserLocation]);
 
   const generateHexagons = useCallback((mapBounds: L.LatLngBounds, resolution: number) => {
     const newHexagons: any[] = [];
@@ -134,6 +279,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
 
   return (
     <div className="relative w-full h-[100dvh] bg-slate-950 overflow-hidden">
+      {/* Grid Density Indicator */}
       <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-[1000] bg-slate-900/90 backdrop-blur px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg border border-white/10 text-xs sm:text-sm pointer-events-none select-none">
         <div className="text-gray-400">Grid Density</div>
         <div className="font-bold text-cyan-400">
@@ -141,14 +287,27 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         </div>
       </div>
 
+      {/* 📍 TOMBOL LOKASI */}
+      <LocationButton 
+        onClick={getUserLocation} 
+        hasLocation={userLocation !== null} 
+      />
+
+      {/* 📍 ERROR MESSAGE (jika GPS ditolak) */}
+      {locationError && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-[1000] bg-red-600/90 backdrop-blur px-4 py-2 rounded-lg text-white text-sm">
+          ⚠️ {locationError}
+        </div>
+      )}
+
       <MapContainer
         ref={mapRef}
-        center={[0, 0]}
-        zoom={5}           // 🔑 DEFAULT: Regional view (masuk akal untuk nelayan)
+        center={userLocation || [0, 0]}  // Prioritaskan lokasi user
+        zoom={userLocation ? 13 : 5}     // Zoom in jika ada lokasi
         minZoom={5}  
         maxZoom={19}
-        maxBounds={[[-90, -180], [90, 180]]}  // 🔒 BATAS DUNIA YANG BENAR
-        maxBoundsViscosity={1.0}              // 🔒 HARD LOCK - TIDAK BISA KE VOID
+        maxBounds={[[-90, -180], [90, 180]]}
+        maxBoundsViscosity={1.0}
         zoomSnap={0.1}
         zoomDelta={0.5}
         className="w-full h-full"
@@ -170,6 +329,9 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
           maxZoom={19}
           noWrap={true}
         />
+
+        {/* 📍 TITIK GPS USER */}
+        <GPSMarker position={userLocation} />
 
         {hexagons.map((hex: any) => {
           const isSelected = selectedGridId === hex.id;
