@@ -206,7 +206,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
   // ✅ FUNGSI UNTUK CENTER MAP KE LOKASI USER (dipanggil saat tombol diklik)
   const centerToLocation = useCallback(() => {
     if (userLocation && mapRef.current) {
-      mapRef.current.flyTo(userLocation, 13, {
+      mapRef.current.flyTo(userLocation, 9, {
         duration: 1.5,
       });
     }
@@ -214,7 +214,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
 
   const handleGPSMarkerClick = useCallback(() => {
     if (userLocation && mapRef.current) {
-      mapRef.current.flyTo(userLocation, 13, {
+      mapRef.current.flyTo(userLocation, 9, {
         duration: 1.5,
       });
     }
