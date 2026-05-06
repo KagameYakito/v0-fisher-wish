@@ -35,7 +35,8 @@ function MapZoomHandler({ onZoomChange, onMapReady }: { onZoomChange: (zoom: num
 }
 
 // 📍 KOMPONEN TITIK GPS DENGAN ANIMASI PULSE
-function GPSMarker({ position }: { position: [number, number] | null }) {
+// 📍 KOMPONEN TITIK GPS DENGAN ANIMASI PULSE
+function GPSMarker({ position, onClick }: { position: [number, number] | null; onClick?: () => void }) {
   if (!position) return null;
 
   return (
@@ -51,6 +52,9 @@ function GPSMarker({ position }: { position: [number, number] | null }) {
           weight: 1,
         }}
         className="animate-ping"
+        eventHandlers={{
+          click: onClick,  // ✅ Tambah klik handler
+        }}
       />
       {/* Lingkaran dalam (solid) */}
       <CircleMarker
@@ -62,6 +66,9 @@ function GPSMarker({ position }: { position: [number, number] | null }) {
           fillOpacity: 0.8,
           weight: 2,
         }}
+        eventHandlers={{
+          click: onClick,  // ✅ Tambah klik handler
+        }}
       />
       {/* Titik tengah (putih) */}
       <CircleMarker
@@ -72,6 +79,9 @@ function GPSMarker({ position }: { position: [number, number] | null }) {
           fillColor: '#ffffff',
           fillOpacity: 1,
           weight: 1,
+        }}
+        eventHandlers={{
+          click: onClick,  // ✅ Tambah klik handler
         }}
       />
     </>
@@ -195,6 +205,14 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
 
   // ✅ FUNGSI UNTUK CENTER MAP KE LOKASI USER (dipanggil saat tombol diklik)
   const centerToLocation = useCallback(() => {
+    if (userLocation && mapRef.current) {
+      mapRef.current.flyTo(userLocation, 13, {
+        duration: 1.5,
+      });
+    }
+  }, [userLocation]);
+
+  const handleGPSMarkerClick = useCallback(() => {
     if (userLocation && mapRef.current) {
       mapRef.current.flyTo(userLocation, 13, {
         duration: 1.5,
@@ -350,8 +368,11 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
           noWrap={true}
         />
 
-        {/* 📍 TITIK GPS USER (hanya marker, tidak auto-center) */}
-        <GPSMarker position={userLocation} />
+        {/* 📍 TITIK GPS USER (bisa diklik untuk zoom detail) */}
+        <GPSMarker 
+          position={userLocation} 
+          onClick={handleGPSMarkerClick}  // ✅ Tambah onClick
+        />
 
         {hexagons.map((hex: any) => {
           const isSelected = selectedGridId === hex.id;
