@@ -27,13 +27,11 @@ function MapZoomHandler({ onZoomChange, onMapReady }: { onZoomChange: (zoom: num
   useEffect(() => {
     const handleZoom = () => onZoomChange(map.getZoom());
     
-    // ✅ Update REAL-TIME selama animasi zoom (bukan hanya zoomend)
-    map.on('zoom', handleZoom);  // Fires continuously during zoom animation
-    map.on('zoomend', handleZoom); // Fires when zoom completes
+    // ✅ Hanya update saat zoom selesai (bukan real-time)
+    map.on('zoomend', handleZoom);
     
     onMapReady();
     return () => { 
-      map.off('zoom', handleZoom);
       map.off('zoomend', handleZoom);
     };
   }, [map, onZoomChange, onMapReady]);
@@ -41,40 +39,33 @@ function MapZoomHandler({ onZoomChange, onMapReady }: { onZoomChange: (zoom: num
   return null;
 }
 
-// 📍 KOMPONEN TITIK GPS DENGAN TRANSISI SMOOTH
+// 📍 KOMPONEN TITIK GPS DENGAN UKURAN FIXED (seperti Google Maps)
 function GPSMarker({ 
   position, 
-  onClick, 
-  currentZoom = 5 
+  onClick 
 }: { 
   position: [number, number] | null; 
   onClick?: () => void;
-  currentZoom?: number;
 }) {
   if (!position) return null;
 
-  // ✅ Formula yang lebih smooth untuk transisi
-  const baseRadius = 12;
-  const minRadius = 4;
-  const dynamicRadius = Math.max(
-    minRadius, 
-    baseRadius / Math.pow(1.3, currentZoom - 5)
-  );
-  
-  const innerRadius = dynamicRadius * 0.5;
-  const centerRadius = Math.max(2, dynamicRadius * 0.25);
+  // ✅ UKURAN FIXED - Tidak berubah saat zoom
+  // Ini membuat marker selalu konsisten dan mudah diklik
+  const outerRadius = 12;   // Lingkaran luar (pulse)
+  const innerRadius = 6;    // Lingkaran dalam (solid)
+  const centerRadius = 3;   // Titik tengah (putih)
 
   return (
     <>
       {/* Lingkaran luar (pulse animation) */}
       <CircleMarker
         center={position}
-        radius={dynamicRadius}
+        radius={outerRadius}
         pathOptions={{
           color: '#3b82f6',
           fillColor: '#3b82f6',
-          fillOpacity: 0.2,
-          weight: 1,
+          fillOpacity: 0.25,
+          weight: 2,
         }}
         className="animate-ping"
         eventHandlers={{
@@ -88,7 +79,7 @@ function GPSMarker({
         pathOptions={{
           color: '#3b82f6',
           fillColor: '#3b82f6',
-          fillOpacity: 0.8,
+          fillOpacity: 0.9,
           weight: 2,
         }}
         eventHandlers={{
@@ -402,7 +393,6 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         <GPSMarker 
           position={userLocation} 
           onClick={handleGPSMarkerClick}
-          currentZoom={zoomLevel}  // ✅ Pass current zoom level
         />
 
         {hexagons.map((hex: any) => {
