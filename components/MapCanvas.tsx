@@ -172,26 +172,31 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
           animate: true,
           duration: 1,
         });
-        hasCenteredRef.current = true; // Langsung set true (tidak pakai setState)
+        hasCenteredRef.current = true;
       }
     };
 
     // Error saat mendapat lokasi
     const error = (err: GeolocationPositionError) => {
       let message = 'Gagal mendapat lokasi';
-      if (err.code === 1) message = 'Izin lokasi ditolak';
-      if (err.code === 2) message = 'Lokasi tidak tersedia';
-      if (err.code === 3) message = 'Timeout meminta lokasi';
+      if (err.code === 1) message = 'Izin lokasi ditolak - klik tombol lokasi untuk mengaktifkan';
+      if (err.code === 2) message = 'Lokasi tidak tersedia - pastikan GPS aktif';
+      if (err.code === 3) message = 'Timeout - coba klik tombol lokasi lagi';
       
       setLocationError(message);
       console.warn('GPS Error:', err);
+      
+      // ✅ JANGAN tampilkan error terlalu lama
+      setTimeout(() => {
+        setLocationError(null);
+      }, 5000); // Hilangkan error setelah 5 detik
     };
 
     // Opsi GPS
     const options = {
-      enableHighAccuracy: true,  // Akurasi tinggi
-      timeout: 10000,            // Timeout 10 detik
-      maximumAge: 0,             // Jangan cache
+      enableHighAccuracy: false,  // ✅ Ubah ke false (lebih cepat, cukup akurat)
+      timeout: 30000,             // ✅ Perbesar jadi 30 detik (dari 10 detik)
+      maximumAge: 300000,         // ✅ Cache 5 menit (lebih cepat)
     };
 
     // Dapatkan lokasi pertama kali
