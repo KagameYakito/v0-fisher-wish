@@ -133,7 +133,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
   const [locationError, setLocationError] = useState<string | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
   const [hasUserMoved, setHasUserMoved] = useState(false); // Track if user manually moved map
-  const [hasLoadedInitialLocation, setHasLoadedInitialLocation] = useState(false);
+  const hasCenteredRef = useRef(false);
 
   const getHexColor = (prob: number) => {
     if (prob < 40) return '#ef4444';
@@ -156,15 +156,14 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       setUserLocation(newLocation);
       setLocationError(null);
 
-      // ✅ HANYA center SEKALI saat pertama kali load
-      if (mapRef.current && !hasLoadedInitialLocation) {
+      // ✅ useRef TIDAK reset saat re-render/switch tab
+      if (mapRef.current && !hasCenteredRef.current) {
         mapRef.current.setView(newLocation, 5, {
           animate: true,
           duration: 1,
         });
-        setHasLoadedInitialLocation(true); // Set flag agar tidak center lagi
+        hasCenteredRef.current = true; // Langsung set true (tidak pakai setState)
       }
-      // Setelah pertama kali, titik biru update tapi map TIDAK bergerak
     };
 
     // Error saat mendapat lokasi
