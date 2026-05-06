@@ -34,17 +34,28 @@ function MapZoomHandler({ onZoomChange, onMapReady }: { onZoomChange: (zoom: num
   return null;
 }
 
-// 📍 KOMPONEN TITIK GPS DENGAN ANIMASI PULSE
-// 📍 KOMPONEN TITIK GPS DENGAN ANIMASI PULSE
-function GPSMarker({ position, onClick }: { position: [number, number] | null; onClick?: () => void }) {
+// 📍 KOMPONEN TITIK GPS DENGAN ANIMASI PULSE (DYNAMIC SIZE)
+function GPSMarker({ position, onClick, currentZoom = 5 }: { 
+  position: [number, number] | null; 
+  onClick?: () => void;
+  currentZoom?: number;
+}) {
   if (!position) return null;
+
+  // ✅ Radius dinamis berdasarkan zoom level
+  // Semakin besar zoom, semakin kecil radius (inverse relationship)
+  const baseRadius = 20;
+  const dynamicRadius = Math.max(4, baseRadius / Math.pow(1.5, currentZoom - 5));
+  
+  const innerRadius = dynamicRadius * 0.4;
+  const centerRadius = dynamicRadius * 0.2;
 
   return (
     <>
       {/* Lingkaran luar (pulse animation) */}
       <CircleMarker
         center={position}
-        radius={20}
+        radius={dynamicRadius}
         pathOptions={{
           color: '#3b82f6',
           fillColor: '#3b82f6',
@@ -53,13 +64,13 @@ function GPSMarker({ position, onClick }: { position: [number, number] | null; o
         }}
         className="animate-ping"
         eventHandlers={{
-          click: onClick,  // ✅ Tambah klik handler
+          click: onClick,
         }}
       />
       {/* Lingkaran dalam (solid) */}
       <CircleMarker
         center={position}
-        radius={8}
+        radius={innerRadius}
         pathOptions={{
           color: '#3b82f6',
           fillColor: '#3b82f6',
@@ -67,13 +78,13 @@ function GPSMarker({ position, onClick }: { position: [number, number] | null; o
           weight: 2,
         }}
         eventHandlers={{
-          click: onClick,  // ✅ Tambah klik handler
+          click: onClick,
         }}
       />
       {/* Titik tengah (putih) */}
       <CircleMarker
         center={position}
-        radius={4}
+        radius={centerRadius}
         pathOptions={{
           color: '#ffffff',
           fillColor: '#ffffff',
@@ -81,7 +92,7 @@ function GPSMarker({ position, onClick }: { position: [number, number] | null; o
           weight: 1,
         }}
         eventHandlers={{
-          click: onClick,  // ✅ Tambah klik handler
+          click: onClick,
         }}
       />
     </>
