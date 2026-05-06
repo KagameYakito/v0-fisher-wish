@@ -21,24 +21,27 @@ interface MapCanvasProps {
   filterSpecies?: string;
 }
 
-// 📍 KOMPONEN TITIK GPS - STATIC, NO ANIMATION CONFLICT
+// 📍 KOMPONEN TITIK GPS - UKURAN SELALU SINKRON DENGAN MAP
 function GPSMarker({ 
   position, 
-  onClick 
+  onClick,
+  mapRef
 }: { 
   position: [number, number] | null; 
   onClick?: () => void;
+  mapRef: React.MutableRefObject<L.Map | null>;
 }) {
   if (!position) return null;
 
-  // ✅ Ukuran FIXED dalam pixel - TIDAK berubah saat zoom
+  // ✅ Ukuran FIXED - Tidak terpengaruh zoom
+  // CircleMarker dengan radius pixel TIDAK akan berubah saat zoom
   const outerRadius = 10;
   const innerRadius = 5;
   const centerRadius = 2.5;
 
   return (
     <>
-      {/* Lingkaran luar - HAPUS animate-ping agar tidak conflict dengan flyTo */}
+      {/* Lingkaran luar (pulse animation) */}
       <CircleMarker
         center={position}
         radius={outerRadius}
@@ -48,7 +51,7 @@ function GPSMarker({
           fillOpacity: 0.25,
           weight: 2,
         }}
-        // ❌ HAPUS: className="animate-ping"
+        className="animate-ping"
         eventHandlers={{
           click: onClick,
         }}
@@ -231,17 +234,17 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
   }, []);
 
   useEffect(() => {
-    if (mapRef.current) {
-      const handleZoomEnd = () => {
-        setZoomLevel(mapRef.current!.getZoom());
-      };
-      
-      mapRef.current.on('zoomend', handleZoomEnd);
-      return () => {
-        mapRef.current!.off('zoomend', handleZoomEnd);
-      };
-    }
-  }, []);
+  if (mapRef.current) {
+    const handleZoomEnd = () => {
+      setZoomLevel(mapRef.current!.getZoom());
+    };
+    
+    mapRef.current.on('zoomend', handleZoomEnd);
+    return () => {
+      mapRef.current!.off('zoomend', handleZoomEnd);
+    };
+  }
+}, []);
 
   // Start GPS tracking saat component mount
   useEffect(() => {
@@ -386,6 +389,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         <GPSMarker 
           position={userLocation} 
           onClick={handleGPSMarkerClick}
+          mapRef={mapRef}  // ✅ Pass map ref
         />
 
         {hexagons.map((hex: any) => {
