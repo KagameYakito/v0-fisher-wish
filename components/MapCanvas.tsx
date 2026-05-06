@@ -21,27 +21,24 @@ interface MapCanvasProps {
   filterSpecies?: string;
 }
 
-// 📍 KOMPONEN TITIK GPS - UKURAN SELALU SINKRON DENGAN MAP
+// 📍 KOMPONEN TITIK GPS - STATIC, NO ANIMATION CONFLICT
 function GPSMarker({ 
   position, 
-  onClick,
-  mapRef
+  onClick 
 }: { 
   position: [number, number] | null; 
   onClick?: () => void;
-  mapRef: React.MutableRefObject<L.Map | null>;
 }) {
   if (!position) return null;
 
-  // ✅ Ukuran FIXED - Tidak terpengaruh zoom
-  // CircleMarker dengan radius pixel TIDAK akan berubah saat zoom
+  // ✅ Ukuran FIXED dalam pixel - TIDAK berubah saat zoom
   const outerRadius = 10;
   const innerRadius = 5;
   const centerRadius = 2.5;
 
   return (
     <>
-      {/* Lingkaran luar (pulse animation) */}
+      {/* Lingkaran luar - HAPUS animate-ping agar tidak conflict dengan flyTo */}
       <CircleMarker
         center={position}
         radius={outerRadius}
@@ -51,7 +48,7 @@ function GPSMarker({
           fillOpacity: 0.25,
           weight: 2,
         }}
-        className="animate-ping"
+        // ❌ HAPUS: className="animate-ping"
         eventHandlers={{
           click: onClick,
         }}
@@ -389,7 +386,6 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         <GPSMarker 
           position={userLocation} 
           onClick={handleGPSMarkerClick}
-          mapRef={mapRef}  // ✅ Pass map ref
         />
 
         {hexagons.map((hex: any) => {
