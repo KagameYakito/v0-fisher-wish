@@ -156,7 +156,13 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       setUserLocation(newLocation);
       setLocationError(null);
 
-      // ✅ TIDAK auto-center sama sekali - biarkan user kontrol
+      // ✅ Center map ke lokasi user TAPI tetap zoom 5 (tidak zoom in)
+      if (mapRef.current && !hasUserMoved) {
+        mapRef.current.setView(newLocation, 5, {
+          animate: true,
+          duration: 1,
+        });
+      }
     };
 
     // Error saat mendapat lokasi
