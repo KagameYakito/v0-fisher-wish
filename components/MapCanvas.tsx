@@ -34,28 +34,25 @@ function MapZoomHandler({ onZoomChange, onMapReady }: { onZoomChange: (zoom: num
   return null;
 }
 
-// 📍 KOMPONEN TITIK GPS DENGAN ANIMASI PULSE (DYNAMIC SIZE)
-function GPSMarker({ position, onClick, currentZoom = 5 }: { 
+// 📍 KOMPONEN TITIK GPS DENGAN UKURAN KONSISTEN
+function GPSMarker({ position, onClick }: { 
   position: [number, number] | null; 
   onClick?: () => void;
-  currentZoom?: number;
 }) {
   if (!position) return null;
 
-  // ✅ Radius dinamis berdasarkan zoom level
-  // Semakin besar zoom, semakin kecil radius (inverse relationship)
-  const baseRadius = 20;
-  const dynamicRadius = Math.max(4, baseRadius / Math.pow(1.5, currentZoom - 5));
-  
-  const innerRadius = dynamicRadius * 0.4;
-  const centerRadius = dynamicRadius * 0.2;
+  // ✅ UKURAN FIXED - Tidak berubah saat zoom
+  // Radius dalam pixel (tidak terpengaruh zoom map)
+  const outerRadius = 8;   // Lingkaran luar
+  const innerRadius = 4;   // Lingkaran dalam
+  const centerRadius = 2;  // Titik tengah
 
   return (
     <>
       {/* Lingkaran luar (pulse animation) */}
       <CircleMarker
         center={position}
-        radius={dynamicRadius}
+        radius={outerRadius}
         pathOptions={{
           color: '#3b82f6',
           fillColor: '#3b82f6',
@@ -388,7 +385,6 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         <GPSMarker 
           position={userLocation} 
           onClick={handleGPSMarkerClick}
-          currentZoom={zoomLevel}   // ✅ Tambah onClick
         />
 
         {hexagons.map((hex: any) => {
