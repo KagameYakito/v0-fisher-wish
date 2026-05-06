@@ -158,7 +158,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
 
       // ✅ Auto-center HANYA saat pertama kali load
       if (!hasLoadedInitialLocation && mapRef.current) {
-        mapRef.current.flyTo(newLocation, 13, {
+        mapRef.current.flyTo(newLocation, 3, {
           duration: 1.5,
         });
         setHasLoadedInitialLocation(true);
