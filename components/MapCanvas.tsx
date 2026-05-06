@@ -133,6 +133,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
   const [locationError, setLocationError] = useState<string | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
   const [hasUserMoved, setHasUserMoved] = useState(false); // Track if user manually moved map
+  const [hasLoadedInitialLocation, setHasLoadedInitialLocation] = useState(false);
 
   const getHexColor = (prob: number) => {
     if (prob < 40) return '#ef4444';
@@ -155,8 +156,13 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       setUserLocation(newLocation);
       setLocationError(null);
 
-      // ✅ HANYA zoom & center jika user KLIK tombol (bukan auto)
-      // Map akan tetap di posisi user kecuali mereka geser manual
+      // ✅ Auto-center HANYA saat pertama kali load
+      if (!hasLoadedInitialLocation && mapRef.current) {
+        mapRef.current.flyTo(newLocation, 13, {
+          duration: 1.5,
+        });
+        setHasLoadedInitialLocation(true);
+      }
     };
 
     // Error saat mendapat lokasi
@@ -192,7 +198,6 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       mapRef.current.flyTo(userLocation, 13, {
         duration: 1.5,
       });
-      setHasUserMoved(false); // Reset flag
     }
   }, [userLocation]);
 
