@@ -156,13 +156,15 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       setUserLocation(newLocation);
       setLocationError(null);
 
-      // ✅ Center map ke lokasi user TAPI tetap zoom 5 (tidak zoom in)
-      if (mapRef.current && !hasUserMoved) {
+      // ✅ HANYA center SEKALI saat pertama kali load
+      if (mapRef.current && !hasLoadedInitialLocation) {
         mapRef.current.setView(newLocation, 5, {
           animate: true,
           duration: 1,
         });
+        setHasLoadedInitialLocation(true); // Set flag agar tidak center lagi
       }
+      // Setelah pertama kali, titik biru update tapi map TIDAK bergerak
     };
 
     // Error saat mendapat lokasi
