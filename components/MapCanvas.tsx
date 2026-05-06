@@ -122,7 +122,7 @@ const getH3Resolution = (zoom: number): number => {
 };
 
 export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' }: MapCanvasProps) {
-  const [zoomLevel, setZoomLevel] = useState(2.5);
+  const [zoomLevel, setZoomLevel] = useState(5);
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
   const [hexagons, setHexagons] = useState<any[]>([]);
   const [isMapReady, setIsMapReady] = useState(false);
@@ -132,6 +132,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
+  const [hasUserMoved, setHasUserMoved] = useState(false); // Track if user manually moved map
 
   const getHexColor = (prob: number) => {
     if (prob < 40) return '#ef4444';
@@ -154,12 +155,8 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       setUserLocation(newLocation);
       setLocationError(null);
 
-      // Auto-center map ke lokasi user
-      if (mapRef.current) {
-        mapRef.current.flyTo(newLocation, 13, {
-          duration: 1.5,
-        });
-      }
+      // ✅ HANYA zoom & center jika user KLIK tombol (bukan auto)
+      // Map akan tetap di posisi user kecuali mereka geser manual
     };
 
     // Error saat mendapat lokasi
@@ -184,8 +181,27 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
     navigator.geolocation.getCurrentPosition(success, error, options);
 
     // Tracking posisi real-time (update setiap 5 detik)
+    // ✅ TIDAK auto-center, hanya update posisi titik biru
     const id = navigator.geolocation.watchPosition(success, error, options);
     setWatchId(id);
+  }, []);
+
+  // ✅ FUNGSI UNTUK CENTER MAP KE LOKASI USER (dipanggil saat tombol diklik)
+  const centerToLocation = useCallback(() => {
+    if (userLocation && mapRef.current) {
+      mapRef.current.flyTo(userLocation, 13, {
+        duration: 1.5,
+      });
+      setHasUserMoved(false); // Reset flag
+    }
+  }, [userLocation]);
+
+  // Track jika user manual move map
+  const handleMapMove = useCallback(() => {
+    if (mapRef.current) {
+      setBounds(mapRef.current.getBounds());
+      setHasUserMoved(true); // User sudah geser map manual
+    }
   }, []);
 
   // Start GPS tracking saat component mount
@@ -270,12 +286,10 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
 
   useEffect(() => {
     if (mapRef.current) {
-      setBounds(mapRef.current.getBounds());
-      mapRef.current.on('moveend', () => {
-        setBounds(mapRef.current!.getBounds());
-      });
+      handleMapMove();
+      mapRef.current.on('moveend', handleMapMove);
     }
-  }, []);
+  }, [handleMapMove]);
 
   return (
     <div className="relative w-full h-[100dvh] bg-slate-950 overflow-hidden">
@@ -289,7 +303,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
 
       {/* 📍 TOMBOL LOKASI */}
       <LocationButton 
-        onClick={getUserLocation} 
+        onClick={centerToLocation}  // ✅ Pakai fungsi center, bukan getUserLocation
         hasLocation={userLocation !== null} 
       />
 
@@ -302,8 +316,8 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
 
       <MapContainer
         ref={mapRef}
-        center={userLocation || [0, 0]}  // Prioritaskan lokasi user
-        zoom={userLocation ? 13 : 5}     // Zoom in jika ada lokasi
+        center={[0, 110]}  // ✅ DEFAULT: Tetap di Indonesia, TIDAK auto-center ke GPS
+        zoom={5}           // ✅ DEFAULT: Zoom level 5 (regional view)
         minZoom={5}  
         maxZoom={19}
         maxBounds={[[-90, -180], [90, 180]]}
@@ -330,7 +344,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
           noWrap={true}
         />
 
-        {/* 📍 TITIK GPS USER */}
+        {/* 📍 TITIK GPS USER (hanya marker, tidak auto-center) */}
         <GPSMarker position={userLocation} />
 
         {hexagons.map((hex: any) => {
