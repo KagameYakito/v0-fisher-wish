@@ -231,21 +231,32 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
   const handleMapMove = useCallback(() => {
     if (mapRef.current) {
       const bounds = mapRef.current.getBounds();
-      // ✅ Tambah padding KECIL saja (10%)
+      
+      // ✅ Padding BESAR untuk zoom rendah, KECIL untuk zoom tinggi
+      const paddingMultiplier = zoomLevel <= 6 ? 3.0 : zoomLevel <= 9 ? 1.0 : 0.2;
+      
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
-      const paddingLat = (ne.lat - sw.lat) * 0.1;
-      const paddingLng = (ne.lng - sw.lng) * 0.1;
+      const paddingLat = (ne.lat - sw.lat) * paddingMultiplier;
+      const paddingLng = (ne.lng - sw.lng) * paddingMultiplier;
       
+      // ✅ Batasi agar tidak melebihi batas dunia
       const extendedBounds = L.latLngBounds(
-        [sw.lat - paddingLat, sw.lng - paddingLng],
-        [ne.lat + paddingLat, ne.lng + paddingLng]
+        [Math.max(sw.lat - paddingLat, -85), Math.max(sw.lng - paddingLng, -180)],
+        [Math.min(ne.lat + paddingLat, 85), Math.min(ne.lng + paddingLng, 180)]
       );
       
       setBounds(extendedBounds);
       setHasUserMoved(true);
+      
+      console.log('📍 Bounds updated:', {
+        zoomLevel,
+        padding: paddingMultiplier,
+        sw: `${extendedBounds.getSouthWest().lat.toFixed(2)}, ${extendedBounds.getSouthWest().lng.toFixed(2)}`,
+        ne: `${extendedBounds.getNorthEast().lat.toFixed(2)}, ${extendedBounds.getNorthEast().lng.toFixed(2)}`
+      });
     }
-  }, []);
+  }, [zoomLevel]);
 
   useEffect(() => {
   if (mapRef.current) {
@@ -367,20 +378,26 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
     if (mapRef.current && !bounds) {
       const timer = setTimeout(() => {
         if (mapRef.current) {
-          const map = mapRef.current;
-          // ✅ Gunakan bounds SELURUH MAP yang terlihat
-          const currentBounds = map.getBounds();
-          setBounds(currentBounds);
-          console.log('📍 Initial bounds set:', {
-            sw: `${currentBounds.getSouthWest().lat.toFixed(2)}, ${currentBounds.getSouthWest().lng.toFixed(2)}`,
-            ne: `${currentBounds.getNorthEast().lat.toFixed(2)}, ${currentBounds.getNorthEast().lng.toFixed(2)}`
-          });
+          // ✅ Untuk zoom 5-6, langsung set bounds SELURUH DUNIA
+          if (zoomLevel <= 6) {
+            const worldBounds = L.latLngBounds(
+              [-85, -180],  // Southwest (hampir kutub selatan)
+              [85, 180]     // Northeast (hampir kutub utara)
+            );
+            setBounds(worldBounds);
+            console.log('🌍 WORLD BOUNDS SET for zoom', zoomLevel);
+          } else {
+            // Untuk zoom tinggi, gunakan bounds viewport
+            const currentBounds = mapRef.current.getBounds();
+            setBounds(currentBounds);
+            console.log('📍 Viewport bounds set');
+          }
         }
-      }, 500);
+      }, 300);
       
       return () => clearTimeout(timer);
     }
-  }, [mapRef.current]);
+  }, [mapRef.current, zoomLevel, bounds]);
 
   return (
     <div className="relative w-full h-[100dvh] bg-slate-950 overflow-hidden">
