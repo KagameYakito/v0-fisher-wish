@@ -262,6 +262,11 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
 
   const generateGrids = useCallback((mapBounds: L.LatLngBounds, gridSize: number) => {
     const newGrids: any[] = [];
+    console.log('🔲 Generating grids...', {
+      bounds: mapBounds,
+      gridSize,
+      zoomLevel
+    });
     const sw = mapBounds.getSouthWest();
     const ne = mapBounds.getNorthEast();
     const mockGridMap = new Map(MOCK_GRIDS.map(g => [g.grid_id, g]));
@@ -322,13 +327,16 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         }
       }
     }
+
+    console.log(`✅ Generated ${newGrids.length} grids`);
     
     setGrids(newGrids);
   }, [filterSpecies]);
 
   useEffect(() => {
-    if (bounds) {
-      generateGrids(bounds, getGridSize(zoomLevel));
+    if (bounds && mapRef.current) {
+      const gridSize = getGridSize(zoomLevel);
+      generateGrids(bounds, gridSize);
     }
   }, [zoomLevel, bounds, generateGrids]);
 
@@ -338,6 +346,16 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       mapRef.current.on('moveend', handleMapMove);
     }
   }, [handleMapMove]);
+
+  useEffect(() => {
+    if (mapRef.current && !bounds) {
+      setTimeout(() => {
+        const initialBounds = mapRef.current!.getBounds();
+        setBounds(initialBounds);
+        console.log('📍 Initial bounds set:', initialBounds);
+      }, 500);
+    }
+  }, [mapRef.current]);
 
   return (
     <div className="relative w-full h-[100dvh] bg-slate-950 overflow-hidden">
