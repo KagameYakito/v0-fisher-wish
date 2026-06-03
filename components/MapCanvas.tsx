@@ -232,18 +232,21 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
     if (mapRef.current) {
       const bounds = mapRef.current.getBounds();
       
-      // ✅ Padding BESAR untuk zoom rendah, KECIL untuk zoom tinggi
-      const paddingMultiplier = zoomLevel <= 6 ? 3.0 : zoomLevel <= 9 ? 1.0 : 0.2;
-      
+      // ✅ Padding untuk longitude saja (horizontal)
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
-      const paddingLat = (ne.lat - sw.lat) * paddingMultiplier;
-      const paddingLng = (ne.lng - sw.lng) * paddingMultiplier;
       
-      // ✅ Batasi agar tidak melebihi batas dunia
+      // ✅ Padding berbeda untuk lat dan lng
+      const paddingLng = (ne.lng - sw.lng) * (zoomLevel <= 6 ? 3.0 : zoomLevel <= 9 ? 1.0 : 0.2);
+      const paddingLat = (ne.lat - sw.lat) * 0.3; // ✅ Padding vertikal KECIL saja (30%)
+      
+      // ✅ CLAMP latitude ke range aman (-80 to 80) untuk hindari distorsi Mercator
+      const clampedSwLat = Math.max(sw.lat - paddingLat, -80);
+      const clampedNeLat = Math.min(ne.lat + paddingLat, 80);
+      
       const extendedBounds = L.latLngBounds(
-        [Math.max(sw.lat - paddingLat, -85), Math.max(sw.lng - paddingLng, -180)],
-        [Math.min(ne.lat + paddingLat, 85), Math.min(ne.lng + paddingLng, 180)]
+        [clampedSwLat, Math.max(sw.lng - paddingLng, -180)],
+        [clampedNeLat, Math.min(ne.lng + paddingLng, 180)]
       );
       
       setBounds(extendedBounds);
@@ -251,7 +254,6 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       
       console.log('📍 Bounds updated:', {
         zoomLevel,
-        padding: paddingMultiplier,
         sw: `${extendedBounds.getSouthWest().lat.toFixed(2)}, ${extendedBounds.getSouthWest().lng.toFixed(2)}`,
         ne: `${extendedBounds.getNorthEast().lat.toFixed(2)}, ${extendedBounds.getNorthEast().lng.toFixed(2)}`
       });
@@ -287,28 +289,40 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
     const newGrids: any[] = [];
     const sw = mapBounds.getSouthWest();
     const ne = mapBounds.getNorthEast();
+    
+    // ✅ CLAMP bounds ke range aman
+    const clampedSwLat = Math.max(sw.lat, -85);
+    const clampedNeLat = Math.min(ne.lat, 85);
+    const clampedSwLng = Math.max(sw.lng, -180);
+    const clampedNeLng = Math.min(ne.lng, 180);
+    
     console.log('🔲 Generate grids:', {
       zoomLevel,
       gridSize,
       bounds: {
-        sw: `${sw.lat.toFixed(2)}, ${sw.lng.toFixed(2)}`,
-        ne: `${ne.lat.toFixed(2)}, ${ne.lng.toFixed(2)}`
+        sw: `${clampedSwLat.toFixed(2)}, ${clampedSwLng.toFixed(2)}`,
+        ne: `${clampedNeLat.toFixed(2)}, ${clampedNeLng.toFixed(2)}`
       }
     });
+    
     const mockGridMap = new Map(MOCK_GRIDS.map(g => [g.grid_id, g]));
   
-    for (let lat = sw.lat; lat < ne.lat; lat += gridSize) {
-      for (let lng = sw.lng; lng < ne.lng; lng += gridSize) {
+    // ✅ Loop dengan bounds yang sudah di-clamp
+    for (let lat = clampedSwLat; lat < clampedNeLat; lat += gridSize) {
+      for (let lng = clampedSwLng; lng < clampedNeLng; lng += gridSize) {
         try {
-          // Buat ID grid unik
           const gridId = `grid_${lat.toFixed(3)}_${lng.toFixed(3)}`;
           
-          // Buat bounds untuk Rectangle
+          // ✅ Pastikan grid tidak melebihi batas
+          const endLat = Math.min(lat + gridSize, clampedNeLat);
+          const endLng = Math.min(lng + gridSize, clampedNeLng);
+          
           const bounds: L.LatLngBoundsExpression = [
             [lat, lng],
-            [lat + gridSize, lng + gridSize]
+            [endLat, endLng]
           ];
   
+          // ... existing code untuk gridData
           const existingData = mockGridMap.get(gridId);
           let gridData: GridData;
   
@@ -353,11 +367,11 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         }
       }
     }
-
+  
     console.log(`✅ Generated ${newGrids.length} grids`);
     
     setGrids(newGrids);
-  }, [filterSpecies]);
+  }, [filterSpecies, zoomLevel]); // ✅ Tambah zoomLevel ke dependencies
 
   useEffect(() => {
     if (bounds && mapRef.current) {
@@ -378,16 +392,15 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
     if (mapRef.current && !bounds) {
       const timer = setTimeout(() => {
         if (mapRef.current) {
-          // ✅ Untuk zoom 5-6, langsung set bounds SELURUH DUNIA
           if (zoomLevel <= 6) {
+            // ✅ Clamp world bounds ke latitude aman
             const worldBounds = L.latLngBounds(
-              [-85, -180],  // Southwest (hampir kutub selatan)
-              [85, 180]     // Northeast (hampir kutub utara)
+              [-80, -180],  // Southwest
+              [80, 180]     // Northeast
             );
             setBounds(worldBounds);
-            console.log('🌍 WORLD BOUNDS SET for zoom', zoomLevel);
+            console.log('🌍 WORLD BOUNDS SET (clamped) for zoom', zoomLevel);
           } else {
-            // Untuk zoom tinggi, gunakan bounds viewport
             const currentBounds = mapRef.current.getBounds();
             setBounds(currentBounds);
             console.log('📍 Viewport bounds set');
