@@ -231,18 +231,15 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
   const handleMapMove = useCallback(() => {
     if (mapRef.current) {
       const bounds = mapRef.current.getBounds();
-      
-      // ✅ Padding untuk longitude saja (horizontal)
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
       
-      // ✅ Padding berbeda untuk lat dan lng
-      const paddingLng = (ne.lng - sw.lng) * (zoomLevel <= 6 ? 3.0 : zoomLevel <= 9 ? 1.0 : 0.2);
-      const paddingLat = (ne.lat - sw.lat) * 0.3; // ✅ Padding vertikal KECIL saja (30%)
+      // ✅ CLAMP ke area fishing yang wajar (-60 to 60 latitude)
+      const clampedSwLat = Math.max(sw.lat, -60);
+      const clampedNeLat = Math.min(ne.lat, 60);
       
-      // ✅ CLAMP latitude ke range aman (-80 to 80) untuk hindari distorsi Mercator
-      const clampedSwLat = Math.max(sw.lat - paddingLat, -80);
-      const clampedNeLat = Math.min(ne.lat + paddingLat, 80);
+      // ✅ Padding horizontal saja
+      const paddingLng = (ne.lng - sw.lng) * (zoomLevel <= 6 ? 3.0 : zoomLevel <= 9 ? 1.0 : 0.2);
       
       const extendedBounds = L.latLngBounds(
         [clampedSwLat, Math.max(sw.lng - paddingLng, -180)],
@@ -251,12 +248,6 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       
       setBounds(extendedBounds);
       setHasUserMoved(true);
-      
-      console.log('📍 Bounds updated:', {
-        zoomLevel,
-        sw: `${extendedBounds.getSouthWest().lat.toFixed(2)}, ${extendedBounds.getSouthWest().lng.toFixed(2)}`,
-        ne: `${extendedBounds.getNorthEast().lat.toFixed(2)}, ${extendedBounds.getNorthEast().lng.toFixed(2)}`
-      });
     }
   }, [zoomLevel]);
 
@@ -286,92 +277,98 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
   }, [getUserLocation]);
 
   const generateGrids = useCallback((mapBounds: L.LatLngBounds, gridSize: number) => {
-    const newGrids: any[] = [];
-    const sw = mapBounds.getSouthWest();
-    const ne = mapBounds.getNorthEast();
-    
-    // ✅ CLAMP bounds ke range aman
-    const clampedSwLat = Math.max(sw.lat, -85);
-    const clampedNeLat = Math.min(ne.lat, 85);
-    const clampedSwLng = Math.max(sw.lng, -180);
-    const clampedNeLng = Math.min(ne.lng, 180);
-    
-    console.log('🔲 Generate grids:', {
-      zoomLevel,
-      gridSize,
-      bounds: {
-        sw: `${clampedSwLat.toFixed(2)}, ${clampedSwLng.toFixed(2)}`,
-        ne: `${clampedNeLat.toFixed(2)}, ${clampedNeLng.toFixed(2)}`
-      }
-    });
-    
-    const mockGridMap = new Map(MOCK_GRIDS.map(g => [g.grid_id, g]));
+  const newGrids: any[] = [];
+  const sw = mapBounds.getSouthWest();
+  const ne = mapBounds.getNorthEast();
   
-    // ✅ Loop dengan bounds yang sudah di-clamp
-    for (let lat = clampedSwLat; lat < clampedNeLat; lat += gridSize) {
-      for (let lng = clampedSwLng; lng < clampedNeLng; lng += gridSize) {
-        try {
-          const gridId = `grid_${lat.toFixed(3)}_${lng.toFixed(3)}`;
+  // ✅ CLAMP ke area fishing
+  const clampedSwLat = Math.max(sw.lat, -60);
+  const clampedNeLat = Math.min(ne.lat, 60);
+  const clampedSwLng = Math.max(sw.lng, -180);
+  const clampedNeLng = Math.min(ne.lng, 180);
+  
+  console.log('🔲 Generate grids:', {
+    zoomLevel,
+    gridSize,
+    bounds: {
+      sw: `${clampedSwLat.toFixed(2)}, ${clampedSwLng.toFixed(2)}`,
+      ne: `${clampedNeLat.toFixed(2)}, ${clampedNeLng.toFixed(2)}`
+    }
+  });
+  
+  const mockGridMap = new Map(MOCK_GRIDS.map(g => [g.grid_id, g]));
+
+  for (let lat = clampedSwLat; lat < clampedNeLat; lat += gridSize) {
+    for (let lng = clampedSwLng; lng < clampedNeLng; lng += gridSize) {
+      try {
+        const gridId = `grid_${lat.toFixed(3)}_${lng.toFixed(3)}`;
+        
+        // ✅ ADJUST grid height berdasarkan latitude untuk kompensasi Mercator
+        // Di lintang tinggi, 1 derajat longitude lebih sempit secara visual
+        const latRad = (lat * Math.PI) / 180;
+        const mercatorScale = Math.cos(latRad);
+        
+        // Grid width tetap, height disesuaikan
+        const adjustedGridSize = gridSize * mercatorScale;
+        
+        const endLat = Math.min(lat + adjustedGridSize, clampedNeLat);
+        const endLng = Math.min(lng + gridSize, clampedNeLng);
+        
+        const bounds: L.LatLngBoundsExpression = [
+          [lat, lng],
+          [endLat, endLng]
+        ];
+
+        // ... existing code untuk gridData (tetap sama)
+        const existingData = mockGridMap.get(gridId);
+        let gridData: GridData;
+
+        if (existingData) {
+          gridData = existingData;
+        } else {
+          const icons: Array<'fish' | 'shrimp' | 'waves'> = ['fish', 'shrimp', 'waves'];
+          const randomIcon = icons[Math.floor(Math.random() * icons.length)];
+          const speciesNames: Record<string, string> = { fish: 'Tongkol', shrimp: 'Lobster', waves: 'Cumi-cumi' };
           
-          // ✅ Pastikan grid tidak melebihi batas
-          const endLat = Math.min(lat + gridSize, clampedNeLat);
-          const endLng = Math.min(lng + gridSize, clampedNeLng);
-          
-          const bounds: L.LatLngBoundsExpression = [
-            [lat, lng],
-            [endLat, endLng]
-          ];
-  
-          // ... existing code untuk gridData
-          const existingData = mockGridMap.get(gridId);
-          let gridData: GridData;
-  
-          if (existingData) {
-            gridData = existingData;
-          } else {
-            const icons: Array<'fish' | 'shrimp' | 'waves'> = ['fish', 'shrimp', 'waves'];
-            const randomIcon = icons[Math.floor(Math.random() * icons.length)];
-            const speciesNames: Record<string, string> = { fish: 'Tongkol', shrimp: 'Lobster', waves: 'Cumi-cumi' };
-            
-            gridData = {
-              grid_id: gridId,
-              lat,
-              lon: lng,
-              species: speciesNames[randomIcon],
-              icon: randomIcon,
-              probability: Math.floor(Math.random() * 100),
-              trend: Math.floor(Math.random() * 20) - 10,
-              reason: 'Auto-generated',
-              bait: 'N/A',
-              status: 'normal' as const,
-            } as GridData;
-          }
-  
-          if (filterSpecies !== 'all') {
-            const iconMap: Record<string, string[]> = { 
-              pelagic: ['fish'], 
-              crustacean: ['shrimp'], 
-              cephalopod: ['waves'] 
-            };
-            const allowedIcons = iconMap[filterSpecies] || [];
-            if (!allowedIcons.includes(gridData.icon)) continue;
-          }
-  
-          newGrids.push({ 
-            id: gridId, 
-            bounds, 
-            data: gridData 
-          });
-        } catch (e) {
-          // Skip invalid coordinates
+          gridData = {
+            grid_id: gridId,
+            lat,
+            lon: lng,
+            species: speciesNames[randomIcon],
+            icon: randomIcon,
+            probability: Math.floor(Math.random() * 100),
+            trend: Math.floor(Math.random() * 20) - 10,
+            reason: 'Auto-generated',
+            bait: 'N/A',
+            status: 'normal' as const,
+          } as GridData;
         }
+
+        if (filterSpecies !== 'all') {
+          const iconMap: Record<string, string[]> = { 
+            pelagic: ['fish'], 
+            crustacean: ['shrimp'], 
+            cephalopod: ['waves'] 
+          };
+          const allowedIcons = iconMap[filterSpecies] || [];
+          if (!allowedIcons.includes(gridData.icon)) continue;
+        }
+
+        newGrids.push({ 
+          id: gridId, 
+          bounds, 
+          data: gridData 
+        });
+      } catch (e) {
+        // Skip invalid coordinates
       }
     }
+  }
+
+  console.log(`✅ Generated ${newGrids.length} grids`);
   
-    console.log(`✅ Generated ${newGrids.length} grids`);
-    
-    setGrids(newGrids);
-  }, [filterSpecies, zoomLevel]); // ✅ Tambah zoomLevel ke dependencies
+  setGrids(newGrids);
+}, [filterSpecies, zoomLevel]);
 
   useEffect(() => {
     if (bounds && mapRef.current) {
@@ -393,13 +390,13 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       const timer = setTimeout(() => {
         if (mapRef.current) {
           if (zoomLevel <= 6) {
-            // ✅ Clamp world bounds ke latitude aman
+            // ✅ Clamp ke area fishing (-60 to 60)
             const worldBounds = L.latLngBounds(
-              [-80, -180],  // Southwest
-              [80, 180]     // Northeast
+              [-60, -180],  // Southwest
+              [60, 180]     // Northeast
             );
             setBounds(worldBounds);
-            console.log('🌍 WORLD BOUNDS SET (clamped) for zoom', zoomLevel);
+            console.log('🌍 FISHING WORLD BOUNDS SET for zoom', zoomLevel);
           } else {
             const currentBounds = mapRef.current.getBounds();
             setBounds(currentBounds);
@@ -437,11 +434,12 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
 
       <MapContainer
         ref={mapRef}
-        center={[0, 110]}  // ✅ DEFAULT: Tetap di Indonesia, TIDAK auto-center ke GPS
-        zoom={5}           // ✅ DEFAULT: Zoom level 5 (regional view)
+        center={[0, 110]}
+        zoom={5}
         minZoom={5}  
         maxZoom={14}
-        maxBounds={[[-90, -180], [90, 180]]}
+        // ✅ BATASI hanya ke latitude -60 sampai 60 (area fishing relevan)
+        maxBounds={[[-60, -180], [60, 180]]}  
         maxBoundsViscosity={1.0}
         zoomSnap={0.1}
         zoomDelta={0.5}
