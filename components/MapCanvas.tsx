@@ -231,32 +231,30 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
   const handleMapMove = useCallback(() => {
     if (mapRef.current) {
       const bounds = mapRef.current.getBounds();
-      
-      // ✅ Padding untuk longitude saja (horizontal)
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
       
-      // ✅ Padding berbeda untuk lat dan lng
-      const paddingLng = (ne.lng - sw.lng) * (zoomLevel <= 6 ? 3.0 : zoomLevel <= 9 ? 1.0 : 0.2);
-      const paddingLat = (ne.lat - sw.lat) * 0.3; // ✅ Padding vertikal KECIL saja (30%)
+      // ✅ CLAMP ketat ke area fishing (-60° to 60°)
+      // Ini adalah area dimana 99% aktivitas fishing terjadi
+      const clampedSwLat = Math.max(sw.lat, -60);
+      const clampedNeLat = Math.min(ne.lat, 60);
       
-      // ✅ CLAMP latitude ke range aman (-80 to 80) untuk hindari distorsi Mercator
-      const clampedSwLat = Math.max(sw.lat - paddingLat, -80);
-      const clampedNeLat = Math.min(ne.lat + paddingLat, 80);
+      // ✅ Padding HORIZONTAL saja (longitude)
+      const paddingLng = (ne.lng - sw.lng) * (zoomLevel <= 6 ? 3.0 : zoomLevel <= 9 ? 1.0 : 0.2);
+      
+      // ✅ JANGAN beri padding vertikal yang besar
+      const paddingLat = (ne.lat - sw.lat) * 0.1; // Hanya 10%
+      
+      const finalSwLat = Math.max(clampedSwLat - paddingLat, -60);
+      const finalNeLat = Math.min(clampedNeLat + paddingLat, 60);
       
       const extendedBounds = L.latLngBounds(
-        [clampedSwLat, Math.max(sw.lng - paddingLng, -180)],
-        [clampedNeLat, Math.min(ne.lng + paddingLng, 180)]
+        [finalSwLat, Math.max(sw.lng - paddingLng, -180)],
+        [finalNeLat, Math.min(ne.lng + paddingLng, 180)]
       );
       
       setBounds(extendedBounds);
       setHasUserMoved(true);
-      
-      console.log('📍 Bounds updated:', {
-        zoomLevel,
-        sw: `${extendedBounds.getSouthWest().lat.toFixed(2)}, ${extendedBounds.getSouthWest().lng.toFixed(2)}`,
-        ne: `${extendedBounds.getNorthEast().lat.toFixed(2)}, ${extendedBounds.getNorthEast().lng.toFixed(2)}`
-      });
     }
   }, [zoomLevel]);
 
@@ -290,9 +288,9 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
     const sw = mapBounds.getSouthWest();
     const ne = mapBounds.getNorthEast();
     
-    // ✅ CLAMP bounds ke range aman
-    const clampedSwLat = Math.max(sw.lat, -85);
-    const clampedNeLat = Math.min(ne.lat, 85);
+    // ✅ CLAMP ke area fishing (-60° to 60°)
+    const clampedSwLat = Math.max(sw.lat, -60);
+    const clampedNeLat = Math.min(ne.lat, 60);
     const clampedSwLng = Math.max(sw.lng, -180);
     const clampedNeLng = Math.min(ne.lng, 180);
     
@@ -307,13 +305,11 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
     
     const mockGridMap = new Map(MOCK_GRIDS.map(g => [g.grid_id, g]));
   
-    // ✅ Loop dengan bounds yang sudah di-clamp
     for (let lat = clampedSwLat; lat < clampedNeLat; lat += gridSize) {
       for (let lng = clampedSwLng; lng < clampedNeLng; lng += gridSize) {
         try {
           const gridId = `grid_${lat.toFixed(3)}_${lng.toFixed(3)}`;
           
-          // ✅ Pastikan grid tidak melebihi batas
           const endLat = Math.min(lat + gridSize, clampedNeLat);
           const endLng = Math.min(lng + gridSize, clampedNeLng);
           
@@ -322,7 +318,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
             [endLat, endLng]
           ];
   
-          // ... existing code untuk gridData
+          // ... existing code untuk gridData (tetap sama)
           const existingData = mockGridMap.get(gridId);
           let gridData: GridData;
   
@@ -371,7 +367,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
     console.log(`✅ Generated ${newGrids.length} grids`);
     
     setGrids(newGrids);
-  }, [filterSpecies, zoomLevel]); // ✅ Tambah zoomLevel ke dependencies
+  }, [filterSpecies, zoomLevel]);
 
   useEffect(() => {
     if (bounds && mapRef.current) {
@@ -393,17 +389,16 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       const timer = setTimeout(() => {
         if (mapRef.current) {
           if (zoomLevel <= 6) {
-            // ✅ Clamp world bounds ke latitude aman
-            const worldBounds = L.latLngBounds(
-              [-80, -180],  // Southwest
-              [80, 180]     // Northeast
+            // ✅ FISHING WORLD BOUNDS (-60° to 60°)
+            const fishingWorldBounds = L.latLngBounds(
+              [-60, -180],  // Southwest
+              [60, 180]     // Northeast
             );
-            setBounds(worldBounds);
-            console.log('🌍 WORLD BOUNDS SET (clamped) for zoom', zoomLevel);
+            setBounds(fishingWorldBounds);
+            console.log('🎣 FISHING WORLD BOUNDS SET (-60° to 60°)');
           } else {
             const currentBounds = mapRef.current.getBounds();
             setBounds(currentBounds);
-            console.log('📍 Viewport bounds set');
           }
         }
       }, 300);
@@ -437,12 +432,14 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
 
       <MapContainer
         ref={mapRef}
-        center={[0, 110]}  // ✅ DEFAULT: Tetap di Indonesia, TIDAK auto-center ke GPS
-        zoom={5}           // ✅ DEFAULT: Zoom level 5 (regional view)
+        center={[0, 110]}
+        zoom={5}
         minZoom={5}  
         maxZoom={14}
-        maxBounds={[[-90, -180], [90, 180]]}
-        maxBoundsViscosity={1.0}
+        // ✅ BATASI hanya -60° sampai 60° (area fishing relevan)
+        // Mayoritas fishing ground dunia ada di range ini
+        maxBounds={[[-60, -180], [60, 180]]}  
+        maxBoundsViscosity={1.0}  // ✅ 1.0 = tidak bisa tembus batas sama sekali
         zoomSnap={0.1}
         zoomDelta={0.5}
         className="w-full h-full"
