@@ -126,10 +126,10 @@ function LocationButton({ onClick, hasLocation }: { onClick: () => void; hasLoca
 
 const getGridSize = (zoom: number): number => {
   // Grid size DIPERKECIL 3x
-  if (zoom <= 6) return 5;         // 5 derajat (~500 km) - dari 15
-  if (zoom <= 8) return 1.5;       // 1.5 derajat (~150 km) - dari 5
-  if (zoom <= 10) return 0.33;     // 0.33 derajat (~33 km) - dari 1
-  if (zoom <= 12) return 0.08;     // 0.08 derajat (~8 km) - dari 0.25
+  if (zoom <= 6) return 8;         // 5 derajat (~500 km) - dari 15
+  if (zoom <= 8) return 3;       // 1.5 derajat (~150 km) - dari 5
+  if (zoom <= 10) return 1;     // 0.33 derajat (~33 km) - dari 1
+  if (zoom <= 12) return 0.33;     // 0.08 derajat (~8 km) - dari 0.25
   return 0.02;                     // 0.02 derajat (~2 km) - dari 0.05
 };
 
