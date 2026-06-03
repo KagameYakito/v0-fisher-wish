@@ -234,19 +234,18 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
       
-      // ✅ CLAMP ketat ke area fishing (-60° to 60°)
-      // Ini adalah area dimana 99% aktivitas fishing terjadi
-      const clampedSwLat = Math.max(sw.lat, -60);
-      const clampedNeLat = Math.min(ne.lat, 60);
+      // ✅ CLAMP longgar (-85° to 85°) - hampir seluruh dunia
+      const clampedSwLat = Math.max(sw.lat, -85);
+      const clampedNeLat = Math.min(ne.lat, 85);
       
-      // ✅ Padding HORIZONTAL saja (longitude)
+      // ✅ Padding HORIZONTAL saja
       const paddingLng = (ne.lng - sw.lng) * (zoomLevel <= 6 ? 3.0 : zoomLevel <= 9 ? 1.0 : 0.2);
       
-      // ✅ JANGAN beri padding vertikal yang besar
-      const paddingLat = (ne.lat - sw.lat) * 0.1; // Hanya 10%
+      // ✅ Padding vertikal KECIL
+      const paddingLat = (ne.lat - sw.lat) * 0.1;
       
-      const finalSwLat = Math.max(clampedSwLat - paddingLat, -60);
-      const finalNeLat = Math.min(clampedNeLat + paddingLat, 60);
+      const finalSwLat = Math.max(clampedSwLat - paddingLat, -85);
+      const finalNeLat = Math.min(clampedNeLat + paddingLat, 85);
       
       const extendedBounds = L.latLngBounds(
         [finalSwLat, Math.max(sw.lng - paddingLng, -180)],
@@ -288,9 +287,9 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
     const sw = mapBounds.getSouthWest();
     const ne = mapBounds.getNorthEast();
     
-    // ✅ CLAMP ke area fishing (-60° to 60°)
-    const clampedSwLat = Math.max(sw.lat, -60);
-    const clampedNeLat = Math.min(ne.lat, 60);
+    // ✅ CLAMP longgar (-85° to 85°)
+    const clampedSwLat = Math.max(sw.lat, -85);
+    const clampedNeLat = Math.min(ne.lat, 85);
     const clampedSwLng = Math.max(sw.lng, -180);
     const clampedNeLng = Math.min(ne.lng, 180);
     
@@ -310,7 +309,16 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         try {
           const gridId = `grid_${lat.toFixed(3)}_${lng.toFixed(3)}`;
           
-          const endLat = Math.min(lat + gridSize, clampedNeLat);
+          // ✅ COMPENSATE Mercator distortion
+          // Grid akan terlihat square di semua latitude
+          const centerLat = lat + (gridSize / 2);
+          const latRad = Math.abs(centerLat * Math.PI / 180);
+          const mercatorScale = Math.cos(latRad);
+          
+          // Adjust grid height agar terlihat proporsional
+          const adjustedLatSize = gridSize * mercatorScale;
+          
+          const endLat = Math.min(lat + adjustedLatSize, clampedNeLat);
           const endLng = Math.min(lng + gridSize, clampedNeLng);
           
           const bounds: L.LatLngBoundsExpression = [
@@ -389,13 +397,14 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       const timer = setTimeout(() => {
         if (mapRef.current) {
           if (zoomLevel <= 6) {
-            // ✅ FISHING WORLD BOUNDS (-60° to 60°)
-            const fishingWorldBounds = L.latLngBounds(
-              [-60, -180],  // Southwest
-              [60, 180]     // Northeast
+            // ✅ WORLD BOUNDS (-85° to 85°)
+            // Mencakup SELURUH dunia termasuk Rusia, Kanada, Scandinavia
+            const worldBounds = L.latLngBounds(
+              [-85, -180],  // Southwest
+              [85, 180]     // Northeast
             );
-            setBounds(fishingWorldBounds);
-            console.log('🎣 FISHING WORLD BOUNDS SET (-60° to 60°)');
+            setBounds(worldBounds);
+            console.log('🌍 WORLD BOUNDS SET (-85° to 85°)');
           } else {
             const currentBounds = mapRef.current.getBounds();
             setBounds(currentBounds);
@@ -438,8 +447,8 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         maxZoom={14}
         // ✅ BATASI hanya -60° sampai 60° (area fishing relevan)
         // Mayoritas fishing ground dunia ada di range ini
-        maxBounds={[[-60, -180], [60, 180]]}  
-        maxBoundsViscosity={1.0}  // ✅ 1.0 = tidak bisa tembus batas sama sekali
+        maxBounds={[[-85, -180], [85, 180]]}  
+        maxBoundsViscosity={0.5}  // ✅ 1.0 = tidak bisa tembus batas sama sekali
         zoomSnap={0.1}
         zoomDelta={0.5}
         className="w-full h-full"
