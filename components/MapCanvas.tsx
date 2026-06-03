@@ -310,13 +310,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         try {
           const gridId = `grid_${lat.toFixed(3)}_${lng.toFixed(3)}`;
           
-          // ✅ COMPENSATE Mercator distortion
-          const latRad = Math.abs(lat * Math.PI / 180);
-          const mercatorFactor = Math.cos(latRad);
-          
-          const adjustedLatSize = gridSize * mercatorFactor;
-          
-          const endLat = Math.min(lat + adjustedLatSize, clampedNeLat);
+          const endLat = Math.min(lat + gridSize, clampedNeLat);
           const endLng = Math.min(lng + gridSize, clampedNeLng);
           
           const bounds: L.LatLngBoundsExpression = [
