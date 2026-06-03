@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MapContainer, TileLayer, Polygon, useMap, ZoomControl, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, useMap, ZoomControl, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import * as h3 from 'h3-js';
@@ -38,7 +38,7 @@ function GPSMarker({
 
   return (
     <>
-      {/* Lingkaran luar - ❌ HAPUS animate-ping */}
+      {/* Lingkaran luar */}
       <CircleMarker
         center={position}
         radius={outerRadius}
@@ -48,7 +48,8 @@ function GPSMarker({
           fillOpacity: 0.25,
           weight: 2,
         }}
-        // ❌ HAPUS BARIS INI: className="animate-ping"
+        className="user-location-marker" // ✅ TAMBAH INI
+        pane="markerPane" // ✅ TAMBAH INI
         eventHandlers={{
           click: onClick,
         }}
@@ -63,6 +64,8 @@ function GPSMarker({
           fillOpacity: 0.9,
           weight: 2,
         }}
+        className="user-location-marker" // ✅ TAMBAH INI
+        pane="markerPane" // ✅ TAMBAH INI
         eventHandlers={{
           click: onClick,
         }}
@@ -77,6 +80,8 @@ function GPSMarker({
           fillOpacity: 1,
           weight: 1,
         }}
+        className="user-location-marker" // ✅ TAMBAH INI
+        pane="markerPane" // ✅ TAMBAH INI
         eventHandlers={{
           click: onClick,
         }}
@@ -382,7 +387,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
           noWrap={true}
         />
 
-        {/* 📍 TITIK GPS USER (bisa diklik untuk zoom detail) */}
+        {/* 📍 TITIK GPS USER (bisa diklik untuk z-oom detail) */}
         <GPSMarker 
           position={userLocation} 
           onClick={handleGPSMarkerClick}

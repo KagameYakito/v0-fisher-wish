@@ -193,3 +193,39 @@
     opacity: 1;
   }
 }
+
+.user-location-marker {
+  transform: none !important;
+  transition: none !important;
+  will-change: auto !important;
+}
+
+.user-location-marker .leaflet-interactive,
+.user-location-marker svg,
+.user-location-marker div {
+  transform: none !important;
+}
+
+/* Prevent marker pane from inheriting zoom transforms */
+.leaflet-marker-pane {
+  z-index: 600;
+}
+
+.leaflet-marker-pane > .user-location-marker {
+  transform: none !important;
+  transition: none !important;
+}
+
+/* Smooth zoom animation without affecting markers */
+.leaflet-zoom-animated {
+  will-change: transform;
+}
+
+.leaflet-fade-anim .leaflet-popup {
+  opacity: 0;
+  transition: opacity 0.2s linear;
+}
+
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+  opacity: 1;
+}
