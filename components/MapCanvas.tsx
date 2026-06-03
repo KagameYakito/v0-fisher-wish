@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MapContainer, TileLayer, Polygon, useMap, ZoomControl, CircleMarker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Rectangle, ZoomControl, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import * as h3 from 'h3-js';
 import { GridData, MOCK_GRIDS } from '@/lib/mock-data';
 
 // Fix Leaflet icon
@@ -125,18 +124,19 @@ function LocationButton({ onClick, hasLocation }: { onClick: () => void; hasLoca
   );
 }
 
-const getH3Resolution = (zoom: number): number => {
-  if (zoom <= 2) return 2;
-  if (zoom <= 4) return 3;
-  if (zoom <= 6) return 5;
-  if (zoom <= 8) return 7;
-  return 9;
+const getGridSize = (zoom: number): number => {
+  // Option B: Grid size dinamis
+  if (zoom <= 6) return 3;      // 300 km
+  if (zoom <= 8) return 1;      // 100 km
+  if (zoom <= 10) return 0.25;  // 25 km
+  if (zoom <= 12) return 0.05;  // 5 km
+  return 0.01;                  // 1 km (zoom 13-14)
 };
 
 export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' }: MapCanvasProps) {
   const [zoomLevel, setZoomLevel] = useState(5);
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
-  const [hexagons, setHexagons] = useState<any[]>([]);
+  const [grids, setGrids] = useState<any[]>([]);
   const [isMapReady, setIsMapReady] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
   
@@ -260,23 +260,27 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
     };
   }, [getUserLocation]);
 
-  const generateHexagons = useCallback((mapBounds: L.LatLngBounds, resolution: number) => {
-    const newHexagons: any[] = [];
-    const step = resolution >= 8 ? 0.2 : resolution >= 6 ? 0.5 : 1.0;
+  const generateGrids = useCallback((mapBounds: L.LatLngBounds, gridSize: number) => {
+    const newGrids: any[] = [];
     const sw = mapBounds.getSouthWest();
     const ne = mapBounds.getNorthEast();
     const mockGridMap = new Map(MOCK_GRIDS.map(g => [g.grid_id, g]));
-
-    for (let lat = sw.lat; lat < ne.lat; lat += step) {
-      for (let lng = sw.lng; lng < ne.lng; lng += step) {
+  
+    for (let lat = sw.lat; lat < ne.lat; lat += gridSize) {
+      for (let lng = sw.lng; lng < ne.lng; lng += gridSize) {
         try {
-          const h3Index = h3.latLngToCell(lat, lng, resolution);
-          const boundary = h3.cellToBoundary(h3Index);
-          const coords = boundary.map((p: number[]) => [p[1], p[0]] as [number, number]);
+          // Buat ID grid unik
+          const gridId = `grid_${lat.toFixed(3)}_${lng.toFixed(3)}`;
           
-          const existingData = mockGridMap.get(h3Index);
+          // Buat bounds untuk Rectangle
+          const bounds: L.LatLngBoundsExpression = [
+            [lat, lng],
+            [lat + gridSize, lng + gridSize]
+          ];
+  
+          const existingData = mockGridMap.get(gridId);
           let gridData: GridData;
-
+  
           if (existingData) {
             gridData = existingData;
           } else {
@@ -285,7 +289,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
             const speciesNames: Record<string, string> = { fish: 'Tongkol', shrimp: 'Lobster', waves: 'Cumi-cumi' };
             
             gridData = {
-              grid_id: h3Index,
+              grid_id: gridId,
               lat,
               lon: lng,
               species: speciesNames[randomIcon],
@@ -297,7 +301,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
               status: 'normal' as const,
             } as GridData;
           }
-
+  
           if (filterSpecies !== 'all') {
             const iconMap: Record<string, string[]> = { 
               pelagic: ['fish'], 
@@ -307,10 +311,10 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
             const allowedIcons = iconMap[filterSpecies] || [];
             if (!allowedIcons.includes(gridData.icon)) continue;
           }
-
-          newHexagons.push({ 
-            id: h3Index, 
-            coords, 
+  
+          newGrids.push({ 
+            id: gridId, 
+            bounds, 
             data: gridData 
           });
         } catch (e) {
@@ -319,14 +323,14 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       }
     }
     
-    setHexagons(newHexagons);
+    setGrids(newGrids);
   }, [filterSpecies]);
 
   useEffect(() => {
     if (bounds) {
-      generateHexagons(bounds, getH3Resolution(zoomLevel));
+      generateGrids(bounds, getGridSize(zoomLevel));
     }
-  }, [zoomLevel, bounds, generateHexagons]);
+  }, [zoomLevel, bounds, generateGrids]);
 
   useEffect(() => {
     if (mapRef.current) {
@@ -341,7 +345,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
       <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-[1000] bg-slate-900/90 backdrop-blur px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg border border-white/10 text-xs sm:text-sm pointer-events-none select-none">
         <div className="text-gray-400">Grid Density</div>
         <div className="font-bold text-cyan-400">
-          {zoomLevel <= 3 ? '1x (Region)' : zoomLevel <= 6 ? '10x (Local)' : '100x+ (Detail)'}
+          {zoomLevel <= 6 ? '1x (Region)' : zoomLevel <= 9 ? '10x (Local)' : '100x (Detail)'}
         </div>
       </div>
 
@@ -393,21 +397,21 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
           onClick={handleGPSMarkerClick}
         />
 
-        {hexagons.map((hex: any) => {
-          const isSelected = selectedGridId === hex.id;
+        {grids.map((grid: any) => {
+          const isSelected = selectedGridId === grid.id;
           return (
-            <Polygon
-              key={hex.id}
-              positions={hex.coords}
+            <Rectangle
+              key={grid.id}
+              bounds={grid.bounds}
               pathOptions={{
-                color: getHexColor(hex.data.probability),
-                fillColor: getHexColor(hex.data.probability),
+                color: getHexColor(grid.data.probability),
+                fillColor: getHexColor(grid.data.probability),
                 fillOpacity: isSelected ? 0.45 : 0.15,
                 weight: isSelected ? 3 : 1.5,
                 opacity: 0.8,
               }}
               eventHandlers={{
-                click: () => onGridSelect(hex.data),
+                click: () => onGridSelect(grid.data),
                 mouseover: (e: any) => !isSelected && e.target.setStyle({ fillOpacity: 0.35, weight: 2.5 }),
                 mouseout: (e: any) => !isSelected && e.target.setStyle({ fillOpacity: 0.15, weight: 1.5 }),
               }}
