@@ -125,12 +125,12 @@ function LocationButton({ onClick, hasLocation }: { onClick: () => void; hasLoca
 }
 
 const getGridSize = (zoom: number): number => {
-  // Option B: Grid size dinamis - DIPERBESAR
-  if (zoom <= 6) return 5;        // 500 km (dari 3)
-  if (zoom <= 8) return 2;        // 200 km (dari 1)
-  if (zoom <= 10) return 0.5;     // 50 km (dari 0.25)
-  if (zoom <= 12) return 0.1;     // 10 km (dari 0.05)
-  return 0.02;                    // 2 km (dari 0.01)
+  // Grid size yang LEBIH BESAR
+  if (zoom <= 6) return 15;        // 15 derajat (~1500 km)
+  if (zoom <= 8) return 5;         // 5 derajat (~500 km)
+  if (zoom <= 10) return 1;        // 1 derajat (~100 km)
+  if (zoom <= 12) return 0.25;     // 0.25 derajat (~25 km)
+  return 0.05;                     // 0.05 derajat (~5 km)
 };
 
 export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' }: MapCanvasProps) {
@@ -230,8 +230,20 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
   // Track jika user manual move map
   const handleMapMove = useCallback(() => {
     if (mapRef.current) {
-      setBounds(mapRef.current.getBounds());
-      setHasUserMoved(true); // User sudah geser map manual
+      const bounds = mapRef.current.getBounds();
+      // ✅ Tambah padding 20% agar grid cover area lebih luas
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      const paddingLat = (ne.lat - sw.lat) * 0.2;
+      const paddingLng = (ne.lng - sw.lng) * 0.2;
+      
+      const extendedBounds = L.latLngBounds(
+        [sw.lat - paddingLat, sw.lng - paddingLng],
+        [ne.lat + paddingLat, ne.lng + paddingLng]
+      );
+      
+      setBounds(extendedBounds);
+      setHasUserMoved(true);
     }
   }, []);
 
@@ -350,11 +362,27 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
 
   useEffect(() => {
     if (mapRef.current && !bounds) {
-      setTimeout(() => {
-        const initialBounds = mapRef.current!.getBounds();
-        setBounds(initialBounds);
-        console.log('📍 Initial bounds set:', initialBounds);
-      }, 500);
+      // ✅ Tunggu map benar-benar ready
+      const timer = setTimeout(() => {
+        if (mapRef.current) {
+          const initialBounds = mapRef.current.getBounds();
+          // ✅ Tambah padding juga untuk initial bounds
+          const sw = initialBounds.getSouthWest();
+          const ne = initialBounds.getNorthEast();
+          const paddingLat = (ne.lat - sw.lat) * 0.2;
+          const paddingLng = (ne.lng - sw.lng) * 0.2;
+          
+          const extendedBounds = L.latLngBounds(
+            [sw.lat - paddingLat, sw.lng - paddingLng],
+            [ne.lat + paddingLat, ne.lng + paddingLng]
+          );
+          
+          setBounds(extendedBounds);
+          console.log('📍 Initial bounds set:', extendedBounds);
+        }
+      }, 1000); // ✅ Tunggu 1 detik (dari 500ms)
+      
+      return () => clearTimeout(timer);
     }
   }, [mapRef.current]);
 
