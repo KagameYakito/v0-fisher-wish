@@ -125,12 +125,12 @@ function LocationButton({ onClick, hasLocation }: { onClick: () => void; hasLoca
 }
 
 const getGridSize = (zoom: number): number => {
-  // Option B: Grid size dinamis
-  if (zoom <= 6) return 3;      // 300 km
-  if (zoom <= 8) return 1;      // 100 km
-  if (zoom <= 10) return 0.25;  // 25 km
-  if (zoom <= 12) return 0.05;  // 5 km
-  return 0.01;                  // 1 km (zoom 13-14)
+  // Option B: Grid size dinamis - DIPERBESAR
+  if (zoom <= 6) return 5;        // 500 km (dari 3)
+  if (zoom <= 8) return 2;        // 200 km (dari 1)
+  if (zoom <= 10) return 0.5;     // 50 km (dari 0.25)
+  if (zoom <= 12) return 0.1;     // 10 km (dari 0.05)
+  return 0.02;                    // 2 km (dari 0.01)
 };
 
 export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies = 'all' }: MapCanvasProps) {
@@ -344,6 +344,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
     if (mapRef.current) {
       handleMapMove();
       mapRef.current.on('moveend', handleMapMove);
+      mapRef.current.on('dragend', handleMapMove);
     }
   }, [handleMapMove]);
 
@@ -397,7 +398,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         doubleClickZoom={true}
         touchZoom={true}
         dragging={true}
-        worldCopyJump={false}
+        worldCopyJump={true}
         preferCanvas={true}
       >
         <ZoomControl position="bottomright" />
@@ -422,16 +423,24 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
               key={grid.id}
               bounds={grid.bounds}
               pathOptions={{
-                color: getHexColor(grid.data.probability),
-                fillColor: getHexColor(grid.data.probability),
-                fillOpacity: isSelected ? 0.45 : 0.15,
-                weight: isSelected ? 3 : 1.5,
-                opacity: 0.8,
+                color: '#94a3b8',           // ✅ Abu-abu untuk border
+                fillColor: 'transparent',   // ✅ Transparan fill
+                fillOpacity: 0,             // ✅ Tidak ada fill
+                weight: isSelected ? 3 : 1, // ✅ Border tipis
+                opacity: 0.6,               // ✅ Border semi-transparan
               }}
               eventHandlers={{
                 click: () => onGridSelect(grid.data),
-                mouseover: (e: any) => !isSelected && e.target.setStyle({ fillOpacity: 0.35, weight: 2.5 }),
-                mouseout: (e: any) => !isSelected && e.target.setStyle({ fillOpacity: 0.15, weight: 1.5 }),
+                mouseover: (e: any) => !isSelected && e.target.setStyle({ 
+                  weight: 2, 
+                  opacity: 1,
+                  color: '#ffffff'
+                }),
+                mouseout: (e: any) => !isSelected && e.target.setStyle({ 
+                  weight: 1, 
+                  opacity: 0.6,
+                  color: '#94a3b8'
+                }),
               }}
             />
           );
