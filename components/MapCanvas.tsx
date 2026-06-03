@@ -363,7 +363,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         center={[0, 110]}  // ✅ DEFAULT: Tetap di Indonesia, TIDAK auto-center ke GPS
         zoom={5}           // ✅ DEFAULT: Zoom level 5 (regional view)
         minZoom={5}  
-        maxZoom={12}
+        maxZoom={14}
         maxBounds={[[-90, -180], [90, 180]]}
         maxBoundsViscosity={1.0}
         zoomSnap={0.1}
@@ -383,7 +383,7 @@ export default function MapCanvas({ onGridSelect, selectedGridId, filterSpecies 
         <TileLayer
           attribution='&copy; CARTO'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          maxZoom={12}
+          maxZoom={14}
           noWrap={true}
         />
 
